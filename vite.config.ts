@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const LIBRARY_FILE = path.resolve(__dirname, 'data/library.json');
+// SONG_GUESSR_DATA_DIR lets the end-to-end tests use their own library instead of the real one.
+const LIBRARY_FILE = path.resolve(__dirname, process.env.SONG_GUESSR_DATA_DIR ?? 'data', 'library.json');
 
 // Tiny local "backend": the library lives in data/library.json so it survives browser
 // resets and can be backed up or shared. Only available while running via Vite.
@@ -47,6 +48,6 @@ function libraryFileApi(): Plugin {
 // Spotify no longer accepts "localhost" redirect URIs, so serve on the loopback IP.
 export default defineConfig({
   plugins: [react(), libraryFileApi()],
-  server: { host: '127.0.0.1', port: 5173, strictPort: true, watch: { ignored: ['**/data/**'] } },
+  server: { host: '127.0.0.1', port: 5173, strictPort: true, watch: { ignored: ['**/data/**', '**/e2e/**'] } },
   preview: { host: '127.0.0.1', port: 5173, strictPort: true },
 });

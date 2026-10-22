@@ -4,7 +4,6 @@ import { play } from '../player';
 import type { Library } from '../types';
 import { GameScreen } from './GameScreen';
 import { GameSetup } from './GameSetup';
-import { PlayerBar } from './PlayerBar';
 
 /** Game setup, or the game in progress (kept in this browser, so a reload resumes it). */
 export function PlayPage({ lib, connected }: { lib: Library; connected: boolean }) {
@@ -15,7 +14,7 @@ export function PlayPage({ lib, connected }: { lib: Library; connected: boolean 
     <main className="main play-main">
       {!connected && <p className="error-text">Connect Spotify (top right) to play.</p>}
       {game ? (
-        <GameScreen lib={lib} game={game} onChange={setGame} onNewGame={() => setGame(null)} />
+        <GameScreen lib={lib} connected={connected} game={game} onChange={setGame} onNewGame={() => setGame(null)} />
       ) : (
         <GameSetup
           lib={lib}
@@ -34,8 +33,6 @@ export function PlayPage({ lib, connected }: { lib: Library; connected: boolean 
           }}
         />
       )}
-      {/* No titleFor: the game screen must not name the song. */}
-      <PlayerBar connected={connected} />
     </main>
   );
 }

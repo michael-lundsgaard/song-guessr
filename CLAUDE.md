@@ -6,7 +6,8 @@ A home-made Hitster: a Spotify-backed song library (React + Vite, TypeScript) wi
 
 - `npm run dev`: app at http://127.0.0.1:5173 (never `localhost`: Spotify only accepts loopback-IP redirect URIs).
 - `npx tsc --noEmit -p .`: typecheck. `npm run build`: typecheck + bundle (delete `dist/` afterwards).
-- There is no test framework. For pure logic, bundle a scratch script with `npx esbuild <file> --bundle --platform=node` and run it with node.
+- `npm run test:e2e`: Playwright tests in `e2e/` (Chromium). They start their own dev server on port 5174 with a generated library in `e2e/.data` (via `SONG_GUESSR_DATA_DIR`), block all Spotify traffic and seed localStorage, so they never touch `data/library.json` and run next to `npm run dev`. Tests save screenshots to `e2e/.results/screens/`; look at them after UI changes.
+- For pure logic, a scratch script bundled with `npx esbuild <file> --bundle --platform=node` and run with node is quickest.
 
 ## Layout
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import {
   BROWSER,
   initBrowserPlayer,
@@ -26,14 +26,21 @@ export function PlayButton({ song }: { song: { uri: string; durationMs: number }
   );
 }
 
-/** Where songs play, plus play/pause, replay and volume for the current song. */
+/**
+ * Where songs play, plus play/pause, replay and volume for the current song. Game screens pass their own
+ * `actions` (left) and `end` (right, e.g. the main game button) and leave out `titleFor`.
+ */
 export function PlayerBar({
   connected,
   titleFor,
+  actions,
+  end,
 }: {
   connected: boolean;
   /** Names the current song; leave out to keep it hidden (game screens). */
   titleFor?: (uri: string) => string | undefined;
+  actions?: ReactNode;
+  end?: ReactNode;
 }) {
   const p = usePlayer();
   useEffect(() => {
@@ -41,7 +48,7 @@ export function PlayerBar({
     initBrowserPlayer();
     void refreshDevices();
   }, [connected]);
-  if (!connected) return null;
+  if (!connected && !actions && !end) return null;
 
   const browserStatus =
     p.sdk === 'ready' ? '' : p.sdk === 'error' ? ' (unavailable)' : p.sdk === 'loading' ? ' (starting…)' : '';
@@ -49,44 +56,53 @@ export function PlayerBar({
 
   return (
     <div className="player-bar">
-      <button className="mini" disabled={!p.current} onClick={() => replay()} title="Play again from the start">
-        ⟲
-      </button>
-      <button className="mini play" disabled={!p.current} onClick={() => togglePlay()} title="Play / pause">
-        {p.playing ? '❚❚' : '▶'}
-      </button>
-      <span className="now muted">{p.current ? (titleFor?.(p.current.uri) ?? '') : 'Nothing playing'}</span>
+      {actions ?? (
+        <>
+          <button className="mini" disabled={!p.current} onClick={() => replay()} title="Play again from the start">
+            ⟲
+          </button>
+          <button className="mini play" disabled={!p.current} onClick={() => togglePlay()} title="Play / pause">
+            {p.playing ? '❚❚' : '▶'}
+          </button>
+          <span className="now muted">{p.current ? (titleFor?.(p.current.uri) ?? '') : 'Nothing playing'}</span>
+        </>
+      )}
       {p.error && <span className="error-text">{p.error}</span>}
       {p.target === BROWSER && p.sdk === 'error' && <span className="error-text">{p.sdkError}</span>}
       <div className="spacer" />
-      <label className="inline" title="Volume">
-        🔊
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={p.volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-        />
-      </label>
-      <label className="inline">
-        Play on
-        <select
-          value={p.target}
-          onFocus={() => refreshDevices()}
-          onChange={(e) => selectTarget(e.target.value)}
-          title="Play in this browser tab, or on another Spotify device (open the Spotify app there first)"
-        >
-          <option value={BROWSER}>This browser{browserStatus}</option>
-          {p.devices.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} ({d.type.toLowerCase()})
-            </option>
-          ))}
-          {!knownTarget && <option value={p.target}>Last used device (not found)</option>}
-        </select>
-      </label>
+      {connected && (
+        <>
+          <label className="inline" title="Volume">
+            🔊
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={p.volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+            />
+          </label>
+          <label className="inline">
+            Play on
+            <select
+              value={p.target}
+              onFocus={() => refreshDevices()}
+              onChange={(e) => selectTarget(e.target.value)}
+              title="Play in this browser tab, or on another Spotify device (open the Spotify app there first)"
+            >
+              <option value={BROWSER}>This browser{browserStatus}</option>
+              {p.devices.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.type.toLowerCase()})
+                </option>
+              ))}
+              {!knownTarget && <option value={p.target}>Last used device (not found)</option>}
+            </select>
+          </label>
+        </>
+      )}
+      {end}
     </div>
   );
 }

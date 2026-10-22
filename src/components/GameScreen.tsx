@@ -3,9 +3,11 @@ import { compareTeams, endGame, markPlayed, nextTurn, place, reveal, toggleAward
 import { isYearSuspect, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
+import { PlayerBar } from './PlayerBar';
 
 interface Props {
   lib: Library;
+  connected: boolean;
   game: Game;
   onChange: (game: Game) => void;
   onNewGame: () => void;
@@ -21,7 +23,7 @@ const AWARD_LABELS = {
 /** A ⚠ year may be a later remaster/compilation year: show it as approximate. */
 const yearLabel = (s: Song) => `${isYearSuspect(s) ? '≈ ' : ''}${songYear(s) ?? '?'}`;
 
-export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
+export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props) {
   const player = usePlayer();
   const round = game.round;
   const song = round ? lib.songs[round.songId] : null;
@@ -106,8 +108,22 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
     );
   }
 
+  const mainAction = !round ? null : round.revealed ? (
+    <button className="primary big" onClick={next}>
+      Next song →
+    </button>
+  ) : isTimeline ? (
+    <button className="primary big" disabled={pendingSlot == null} onClick={confirmPlacement}>
+      {pendingSlot == null ? 'Pick a spot on the timeline' : 'Confirm placement (Enter)'}
+    </button>
+  ) : (
+    <button className="primary big" onClick={() => onChange(reveal(game))}>
+      Reveal (Enter)
+    </button>
+  );
+
   return (
-    <div className="game">
+    <div className={`game mode-${game.setup.mode}`}>
       <div className="scoreboard">
         {game.teams.map((t, i) => (
           <div key={i} className={`team-score${i === game.turn ? ' current' : ''}`}>
@@ -131,69 +147,52 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
 
       {song && round && (
         <div className="stage">
-          <p className="turn">
-            <b>{team.name}</b>'s turn
-          </p>
-
           {round.revealed ? (
             <RevealedCard song={song} />
           ) : (
-            <div className="card hidden-card">
+            <div className={`card hidden-card${isPlayingRound && player.playing ? ' playing' : ''}`}>
               <div className="mystery">?</div>
-              <div className="controls">
-                <button className="big ghost" disabled={!isPlayingRound} onClick={() => replay()} title="Replay (R)">
-                  ⟲
-                </button>
-                <button
-                  className="big primary"
-                  onClick={() => (isPlayingRound ? togglePlay() : playSong(song))}
-                  title="Play / pause (space)"
-                >
-                  {isPlayingRound && player.playing ? '❚❚ Pause' : '▶ Play'}
-                </button>
+              <div className="equalizer" aria-hidden>
+                <i />
+                <i />
+                <i />
+                <i />
               </div>
-              {player.error && <p className="error-text">{player.error}</p>}
             </div>
           )}
 
-          {game.setup.mode === 'guess' && !round.revealed && (
-            <button className="primary big" onClick={() => onChange(reveal(game))}>
-              Reveal (Enter)
-            </button>
-          )}
-
-          {isTimeline && !round.revealed && (
-            <button className="primary big" disabled={pendingSlot == null} onClick={confirmPlacement}>
-              {pendingSlot == null ? 'Pick a spot on the timeline' : 'Confirm placement (Enter)'}
-            </button>
-          )}
-
-          {isTimeline && round.revealed && (
-            <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
-              {round.correct ? '✓ Correct! The card stays.' : `✗ Wrong. It was ${yearLabel(song)}.`}
+          <div className="stage-info">
+            <p className="turn">
+              <b>{team.name}</b>'s turn
             </p>
-          )}
-
-          {round.awarded && (
-            <div className="awards">
-              {isTimeline && <span className="muted">Extra points (tiebreaker):</span>}
-              {(['title', 'artist', 'year'] as const).map((field) => (
-                <button
-                  key={field}
-                  className={`award${round.awarded![field] ? ' on' : ''}`}
-                  onClick={() => onChange(toggleAward(game, field))}
-                >
-                  {round.awarded![field] ? '✓' : '+1'} {AWARD_LABELS[field][isTimeline ? 1 : 0]}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {round.revealed && (
-            <button className="primary big" onClick={next}>
-              Next song →
-            </button>
-          )}
+            {!round.revealed && (
+              <p className="muted hint">
+                {isTimeline
+                  ? 'Where does this song go on your timeline? Pick a spot below, then confirm.'
+                  : 'Name the title, the artist and the year, then reveal the card.'}
+              </p>
+            )}
+            {isTimeline && round.revealed && (
+              <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
+                {round.correct ? '✓ Correct! The card stays.' : `✗ Wrong. It was ${yearLabel(song)}.`}
+              </p>
+            )}
+            {round.awarded && (
+              <div className="awards">
+                {isTimeline && <span className="muted">Extra points (tiebreaker):</span>}
+                {(['title', 'artist', 'year'] as const).map((field) => (
+                  <button
+                    key={field}
+                    className={`award${round.awarded![field] ? ' on' : ''}`}
+                    onClick={() => onChange(toggleAward(game, field))}
+                  >
+                    {round.awarded![field] ? '✓' : '+1'} {AWARD_LABELS[field][isTimeline ? 1 : 0]}
+                  </button>
+                ))}
+              </div>
+            )}
+            {player.error && <p className="error-text">{player.error}</p>}
+          </div>
         </div>
       )}
 
@@ -207,6 +206,27 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
           onSelect={setPendingSlot}
         />
       )}
+
+      <PlayerBar
+        connected={connected}
+        actions={
+          song && (
+            <>
+              <button className="mini big-icon" disabled={!isPlayingRound} onClick={() => replay()} title="Replay (R)">
+                ⟲
+              </button>
+              <button
+                className="mini big-icon play"
+                onClick={() => (isPlayingRound ? togglePlay() : playSong(song))}
+                title="Play / pause (space)"
+              >
+                {isPlayingRound && player.playing ? '❚❚' : '▶'}
+              </button>
+            </>
+          )
+        }
+        end={mainAction}
+      />
     </div>
   );
 }

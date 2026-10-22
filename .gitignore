@@ -150,3 +150,8 @@ vite.config.ts.timestamp-*
 
 # Song library (personal, kept local)
 data/
+
+# End-to-end test output and throwaway library
+e2e/.data/
+e2e/.results/
+playwright-report/
