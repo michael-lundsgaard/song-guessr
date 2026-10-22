@@ -262,7 +262,7 @@ const en = {
   randomStartTitle: 'Start each song somewhere in the middle instead of at the beginning',
   extraPoints: 'Extra points for the exact year, artist and title (tiebreaker)',
   extraPointsTitle:
-    'After each card, one extra point each for naming the exact year, the artist and the title. They only decide a tie.',
+    'After a card placed right, one extra point each for naming the exact year, the artist and the title. They only decide a tie.',
   startGame: 'Start game',
   needMoreSongs: 'Pick collections with more songs',
 
@@ -323,7 +323,7 @@ const en = {
       'A song from the same year as a neighbouring card fits on either side of it.',
       'A year marked ≈ may be the year of a reissue (the real one can be earlier), so the spot just before also counts.',
       'The first team to reach the number of cards to win, wins.',
-      'With extra points: after the card is shown, the host gives +1 each for the exact year, the artist and the title. Extra points only decide a tie on cards.',
+      'With extra points: when the card was placed right, the host gives +1 each for the exact year, the artist and the title. A wrong placement gives no extra points. Extra points only decide a tie on cards.',
     ],
     guess: [
       'On your turn a song plays. Say the title, the artist and the year out loud.',
@@ -595,7 +595,7 @@ const da: Messages = {
   randomStartTitle: 'Start hver sang et sted i midten i stedet for fra begyndelsen',
   extraPoints: 'Ekstrapoint for præcist år, kunstner og titel (afgør uafgjort)',
   extraPointsTitle:
-    'Efter hvert kort ét ekstrapoint for hvert af: det præcise år, kunstneren og titlen. De afgør kun uafgjort.',
+    'Efter et rigtigt placeret kort ét ekstrapoint for hvert af: det præcise år, kunstneren og titlen. De afgør kun uafgjort.',
   startGame: 'Start spillet',
   needMoreSongs: 'Vælg samlinger med flere sange',
 
@@ -654,7 +654,7 @@ const da: Messages = {
       'En sang fra samme år som et nabokort passer på begge sider af det.',
       'Et år markeret med ≈ kan være året for en genudgivelse (det rigtige kan være tidligere), så pladsen lige før tæller også.',
       'Det første hold, der når antallet af kort for at vinde, vinder.',
-      'Med ekstrapoint: når kortet er vist, giver værten +1 for hvert af: det præcise år, kunstneren og titlen. Ekstrapoint afgør kun uafgjort på kort.',
+      'Med ekstrapoint: er kortet placeret rigtigt, giver værten +1 for hvert af: det præcise år, kunstneren og titlen. En forkert placering giver ingen ekstrapoint. Ekstrapoint afgør kun uafgjort på kort.',
     ],
     guess: [
       'Når det er jeres tur, spiller en sang. Sig titlen, kunstneren og året højt.',

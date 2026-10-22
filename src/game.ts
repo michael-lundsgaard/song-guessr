@@ -201,7 +201,8 @@ export function place(game: Game, lib: Library, index: number): Game {
     const timeline = [...t.timeline.slice(0, rightAt), round.songId, ...t.timeline.slice(rightAt)];
     return { ...t, timeline, score: t.score + 1 };
   });
-  const awarded = game.setup.extraPoints ? { title: false, artist: false, year: false } : undefined;
+  // Extra points only for a card placed right.
+  const awarded = game.setup.extraPoints && correct ? { title: false, artist: false, year: false } : undefined;
   return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct, rightAt, awarded } };
 }
 

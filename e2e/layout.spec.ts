@@ -50,6 +50,8 @@ test('a wrong timeline answer shows where the card was put and where it belongs'
   await expect(page.locator('.verdict.wrong')).toBeVisible();
   await expect(page.locator('.mini-card.misplaced')).toHaveCount(1);
   await expect(page.locator('.belongs-here')).toHaveCount(1);
+  // A wrong placement earns no extra points.
+  await expect(page.locator('.award')).toHaveCount(0);
   await page.screenshot(shot('timeline-miss'));
 });
 
@@ -57,7 +59,8 @@ test('the three extra-point buttons sit on one row', async ({ page }) => {
   const lib = makeLibrary();
   await seed(page, lib, { 'sg.page': 'play', 'sg.game': makeTimelineGame(lib, 5) });
   await page.goto('/');
-  await page.locator('.slot').first().click();
+  // In the fixture the current song is newer than every card, so last is right (extras need a right card).
+  await page.locator('.slot').last().click();
   await page.keyboard.press('Enter');
   const tops = await page.locator('.award').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
   expect(tops).toHaveLength(3);

@@ -66,7 +66,7 @@ When viewing a collection, a readiness line shows whether it's good to play: at 
 
 Open **Play** in the top bar, pick a game, the collections (and optionally decades), the teams and the target, then **Start game**. Pick "This browser" as the player so no other app shows the song title.
 
-- **Timeline** (Hitster rules): every team starts with one face-up card. The song plays, and the team whose turn it is picks a **+** slot on their timeline and confirms it (**Confirm placement** or Enter). A correct guess keeps the card; first to the target number of cards wins. With **Extra points** on, the host can also give +1 each for the exact year, the artist and the title. Extra points only break a tie on cards.
+- **Timeline** (Hitster rules): every team starts with one face-up card. The song plays, and the team whose turn it is picks a **+** slot on their timeline and confirms it (**Confirm placement** or Enter). A correct guess keeps the card; first to the target number of cards wins. With **Extra points** on, the host can also give +1 each for the exact year, the artist and the title, but only when the card was placed right. Extra points only break a tie on cards.
 - **Guess the song**: the song plays, **Reveal** shows the card, and the host clicks **+1 Title / Artist / Year** for each part the team got right.
 - **Closest year**: every team guesses the year at the same time; the host types the guesses in (Enter jumps to the next team). The closest team gets a point, an exact year two.
 - **Which decade?**: the team picks the decade from big buttons. Quick, and good for younger players.
