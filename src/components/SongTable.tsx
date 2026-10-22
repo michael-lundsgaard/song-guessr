@@ -48,7 +48,9 @@ export function SongTable({
   yearActions,
 }: Props) {
   const t = useT();
-  const header = (key: SortKey, label: string) => <SortHeader sortKey={key} label={label} sort={sort} onSort={onSort} />;
+  const header = (key: SortKey, label: string) => (
+    <SortHeader sortKey={key} label={label} sort={sort} onSort={onSort} />
+  );
   // Render rows in pages as the user scrolls; mounting thousands of rows at once is what makes filtering slow.
   const [limit, setLimit] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -57,10 +59,9 @@ export function SongTable({
     const el = sentinel.current;
     if (!el) return;
     // Re-created after each page so it fires again if the sentinel is still in view.
-    const observer = new IntersectionObserver(
-      (entries) => entries[0].isIntersecting && setLimit((l) => l + PAGE),
-      { rootMargin: '600px' },
-    );
+    const observer = new IntersectionObserver((entries) => entries[0].isIntersecting && setLimit((l) => l + PAGE), {
+      rootMargin: '600px',
+    });
     observer.observe(el);
     return () => observer.disconnect();
   }, [limit, songs.length]);
@@ -111,13 +112,23 @@ export function SongTable({
           ))}
         </tbody>
       </table>
-      {songs.length > limit && <div ref={sentinel} className="muted count">{t.loadingMore}</div>}
+      {songs.length > limit && (
+        <div ref={sentinel} className="muted count">
+          {t.loadingMore}
+        </div>
+      )}
     </>
   );
 }
 
 // Text and year columns start A→Z / oldest first; "Added" starts newest first.
-const DEFAULT_DIR: Record<SortKey, Sort['dir']> = { added: 'desc', year: 'asc', title: 'asc', artist: 'asc', album: 'asc' };
+const DEFAULT_DIR: Record<SortKey, Sort['dir']> = {
+  added: 'desc',
+  year: 'asc',
+  title: 'asc',
+  artist: 'asc',
+  album: 'asc',
+};
 
 /** A column title that sorts by it; clicking the active column flips the direction. */
 function SortHeader(props: { sortKey: SortKey; label: string; sort: Sort; onSort: (sort: Sort) => void }) {

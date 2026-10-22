@@ -115,7 +115,10 @@ test("import: Spotify's QUOTA_EXCEEDED stops at once instead of retrying", async
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Add songs' }).click();
-  const links = Array.from({ length: 12 }, (_, i) => `https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQ${'abcdefghijkl'[i]}`);
+  const links = Array.from(
+    { length: 12 },
+    (_, i) => `https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQ${'abcdefghijkl'[i]}`,
+  );
   await page.locator('textarea').fill(links.join('\n'));
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(page.locator('.log')).toContainText("Spotify's limit for the app is used up");

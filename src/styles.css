@@ -16,7 +16,12 @@
   --selection-bar: #1f3a2a;
   --shadow: rgba(0, 0, 0, 0.35);
   color-scheme: dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   font-size: 14px;
 }
 
@@ -875,7 +880,6 @@ input.narrow {
   line-height: 1;
   color: var(--accent);
 }
-
 
 .revealed-card img {
   width: 170px;

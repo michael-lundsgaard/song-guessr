@@ -17,7 +17,7 @@ The top bar switches between **English and Danish** (EN / DA; a Danish browser s
 
 1. Go to https://developer.spotify.com/dashboard, log in, and **Create app**.
 2. Name/description: anything. **Redirect URI:** `http://127.0.0.1:5173/` (exactly, including the trailing slash).
-3. Under *Which API/SDKs are you planning to use?* tick **Web API** and **Web Playback SDK**. Save.
+3. Under _Which API/SDKs are you planning to use?_ tick **Web API** and **Web Playback SDK**. Save.
 4. Copy the **Client ID** from the app's settings page and set it as `DEFAULT_CLIENT_ID` in `src/spotify.ts` (or paste it in the app's ⚙ settings). It's public; no client secret is needed because the app uses PKCE.
 5. In the app, click **Connect Spotify**.
 6. Under **User Management**, add **your own** Spotify account (name + the email of the Spotify account you log in with). Development-mode apps reject API calls with a 403 for unlisted accounts, even the owner's. Family members playing along on your PC don't need to be added.
@@ -32,7 +32,7 @@ Note: Spotify only lets development-mode apps read the songs of playlists you ow
 
 - Playlist links import all their songs (optionally creating a collection named after the playlist).
 - Track or album links. A `(1975)` on a line with a single track link overrides Spotify's year.
-- **Liked Songs**: use the *Liked Songs* button (or paste `Liked Songs` on a line).
+- **Liked Songs**: use the _Liked Songs_ button (or paste `Liked Songs` on a line).
 - In the Spotify desktop app, click a song, press Ctrl+A then Ctrl+C. The songs paste as track links. This works in playlists, albums and artist pages, but not in Liked Songs (use the button for those).
 
 Songs already in the library are never fetched again.

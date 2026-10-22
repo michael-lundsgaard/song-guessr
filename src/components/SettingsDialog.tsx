@@ -45,7 +45,12 @@ export function SettingsDialog({ open, onClose }: Props) {
         </ol>
         <label className="field">
           {t.clientId}
-          <input value={clientId} onChange={(e) => setValue(e.target.value)} placeholder={t.clientIdPlaceholder} autoFocus />
+          <input
+            value={clientId}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={t.clientIdPlaceholder}
+            autoFocus
+          />
         </label>
         <div className="dialog-actions">
           <button type="button" className="ghost" onClick={onClose}>

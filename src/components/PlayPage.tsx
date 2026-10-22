@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { loadGame, loadRecent, markPlayed, newGame, saveGame, saveLastSetup, type Game, type GameSetup as Setup } from '../game';
+import {
+  loadGame,
+  loadRecent,
+  markPlayed,
+  newGame,
+  saveGame,
+  saveLastSetup,
+  type Game,
+  type GameSetup as Setup,
+} from '../game';
 import { useT } from '../i18n';
 import { play } from '../player';
 import type { Library } from '../types';

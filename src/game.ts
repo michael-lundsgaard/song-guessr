@@ -101,7 +101,11 @@ function buildDeck(songs: Song[], recent: string[]): string[] {
 
 const mainArtist = (s: Song) => s.artists[0] ?? '';
 
-const nameWords = (name: string) => ` ${name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+const nameWords = (name: string) =>
+  ` ${name
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()} `;
 
 /** Same act or close enough to confuse: one name's words appear in the other's ("Axwell" / "Axwell /\ Ingrosso"). */
 function namesClash(a: string, b: string): boolean {

@@ -131,10 +131,7 @@ export default function App() {
     [update, findYear],
   );
 
-  const collections = useMemo(
-    () => Object.values(lib?.collections ?? {}).sort(compareCollections),
-    [lib?.collections],
-  );
+  const collections = useMemo(() => Object.values(lib?.collections ?? {}).sort(compareCollections), [lib?.collections]);
   const allSongs = useMemo(() => Object.values(lib?.songs ?? {}), [lib?.songs]);
   const titleFor = useCallback(
     (uri: string) => {
@@ -326,10 +323,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <span
-          className={`save ${saveState}`}
-          title={t.saveTitle}
-        >
+        <span className={`save ${saveState}`} title={t.saveTitle}>
           {saveState === 'saving' ? t.saveSaving : saveState === 'error' ? t.saveFailed : t.saveSaved}
         </span>
         <div className="spacer" />
@@ -377,7 +371,12 @@ export default function App() {
         <>
           <aside className="sidebar">
             <nav>
-              <SidebarItem label={t.allSongs} count={allSongs.length} active={view === ALL} onClick={() => setView(ALL)} />
+              <SidebarItem
+                label={t.allSongs}
+                count={allSongs.length}
+                active={view === ALL}
+                onClick={() => setView(ALL)}
+              />
               <SidebarItem
                 label={t.unsorted}
                 count={collectionCounts.unsorted}
@@ -596,9 +595,7 @@ export default function App() {
                   </div>
                 )}
 
-                <p className="muted count">
-                  {t.showing(shown.length, inView.length)}
-                </p>
+                <p className="muted count">{t.showing(shown.length, inView.length)}</p>
                 <SongTable
                   songs={shown}
                   collections={lib.collections}

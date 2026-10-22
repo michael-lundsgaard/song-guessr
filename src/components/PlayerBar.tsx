@@ -68,7 +68,9 @@ export function PlayerBar({
           <button className="mini play" disabled={!p.current} onClick={() => togglePlay()} title={t.playPauseTitle}>
             {p.playing ? '❚❚' : '▶'}
           </button>
-          <span className="now muted">{!p.current ? t.nothingPlaying : p.current.secret ? t.secretSong : (titleFor?.(p.current.uri) ?? '')}</span>
+          <span className="now muted">
+            {!p.current ? t.nothingPlaying : p.current.secret ? t.secretSong : (titleFor?.(p.current.uri) ?? '')}
+          </span>
         </>
       )}
       {p.error && <span className="error-text">{p.error}</span>}

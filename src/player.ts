@@ -79,8 +79,7 @@ export function usePlayer(): PlayerState {
 }
 
 /** Current position, interpolated since the last update while playing. */
-export const positionNow = (s: PlayerState) =>
-  s.playing ? s.positionMs + (Date.now() - s.positionAt) : s.positionMs;
+export const positionNow = (s: PlayerState) => (s.playing ? s.positionMs + (Date.now() - s.positionAt) : s.positionMs);
 
 // --- Web Playback SDK (only the parts we use) ---
 
@@ -241,7 +240,10 @@ function randomStart(durationMs: number) {
 }
 
 /** Plays a song. Call from a click handler: browsers only allow audio after a user gesture. */
-export async function play(song: { uri: string; durationMs: number }, options: { randomStart?: boolean; startMs?: number; secret?: boolean } = {}) {
+export async function play(
+  song: { uri: string; durationMs: number },
+  options: { randomStart?: boolean; startMs?: number; secret?: boolean } = {},
+) {
   // Must run synchronously inside the gesture, before any await.
   if (state.target === BROWSER) void sdkPlayer?.activateElement();
   const startMs = options.startMs ?? (options.randomStart ? randomStart(song.durationMs) : 0);
@@ -297,7 +299,9 @@ export async function setVolume(volume: number) {
   localStorage.setItem(VOLUME_KEY, String(volume));
   set({ volume });
   await run(() =>
-    state.target === BROWSER ? (sdkPlayer?.setVolume(volume) ?? Promise.resolve()) : setDeviceVolume(targetDeviceId(), volume * 100),
+    state.target === BROWSER
+      ? (sdkPlayer?.setVolume(volume) ?? Promise.resolve())
+      : setDeviceVolume(targetDeviceId(), volume * 100),
   );
 }
 

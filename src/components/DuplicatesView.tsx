@@ -19,11 +19,7 @@ export function DuplicatesView({ groups, collections, onMerge, onIgnore }: Props
       <div className="toolbar">
         <p className="muted count">{t.duplicatesIntro(groups.length)}</p>
         <div className="spacer" />
-        <button
-          className="ghost"
-          title={t.mergeAllTitle}
-          onClick={() => groups.forEach((g) => onMerge(g[0].id, g))}
-        >
+        <button className="ghost" title={t.mergeAllTitle} onClick={() => groups.forEach((g) => onMerge(g[0].id, g))}>
           {t.mergeAll(groups.length)}
         </button>
       </div>

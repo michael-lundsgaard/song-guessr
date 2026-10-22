@@ -177,7 +177,11 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           />
         </label>
         <label className="inline" title={t.randomStartTitle}>
-          <input type="checkbox" checked={setup.randomStart} onChange={(e) => patch({ randomStart: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={setup.randomStart}
+            onChange={(e) => patch({ randomStart: e.target.checked })}
+          />
           {t.randomStart}
         </label>
         {setup.mode === 'timeline' && (

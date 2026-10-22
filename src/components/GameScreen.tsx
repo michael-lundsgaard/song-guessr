@@ -293,7 +293,11 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
           placing={!round.revealed}
           selected={typeof pending === 'number' ? pending : null}
           highlight={round.revealed && round.correct ? round.songId : undefined}
-          miss={round.revealed && !round.correct && song ? { song, placedAt: round.placedAt!, rightAt: round.rightAt! } : undefined}
+          miss={
+            round.revealed && !round.correct && song
+              ? { song, placedAt: round.placedAt!, rightAt: round.rightAt! }
+              : undefined
+          }
           onSelect={setPending}
         />
       )}

@@ -70,7 +70,8 @@ const en = {
   syncTitle: 'Fetch the list from Spotify again and add any new songs. Songs removed on Spotify stay here.',
   syncing: 'Updating…',
   linkSource: '🔗 Link to Spotify',
-  linkSourceTitle: 'Tell the app which Spotify playlist or album this collection came from, so it can be updated from there',
+  linkSourceTitle:
+    'Tell the app which Spotify playlist or album this collection came from, so it can be updated from there',
   linkSourcePrompt: 'Paste the link to the Spotify playlist or album (or type Liked Songs):',
   linkSourceInvalid: "That isn't a link to a Spotify playlist or album.",
   syncDone: (n: number) => (n ? `Added ${n} new songs` : 'Up to date: no new songs'),
@@ -184,7 +185,8 @@ const en = {
     what === 'playlist' ? `Loading playlist… ${n} tracks` : `Loading Liked Songs… ${n} tracks`,
   listLoaded: (kind: 'playlist' | 'album' | 'liked', name: string, n: number) =>
     `${{ playlist: 'Playlist', album: 'Album', liked: 'Collection' }[kind]} "${name}": ${n} songs`,
-  listSkipped: (name: string, n: number) => `"${name}": skipped ${n} podcast episodes, local files or unavailable items`,
+  listSkipped: (name: string, n: number) =>
+    `"${name}": skipped ${n} podcast episodes, local files or unavailable items`,
   couldNotLoad: (what: string, message: string) => `Couldn't load ${what}: ${message}`,
   notPlayable: (id: string) => `Track ${id} is not playable on Spotify`,
   trackFailed: (id: string, message: string) => `Track ${id}: ${message}`,
@@ -234,7 +236,8 @@ const en = {
     artist: "Who's singing?",
   } satisfies Record<Mode, string>,
   modeHelp: {
-    timeline: 'Hitster rules: place each song before, between or after the cards on your timeline. A correct card stays.',
+    timeline:
+      'Hitster rules: place each song before, between or after the cards on your timeline. A correct card stays.',
     guess: 'Name the title, artist and year. One point for each.',
     closest: 'Every team guesses the year at once. Closest gets a point, the exact year two.',
     decade: 'Pick the decade the song is from. Quick, and good for younger players.',
@@ -418,7 +421,8 @@ const da: Messages = {
   syncTitle: 'Henter listen fra Spotify igen og tilføjer nye sange. Sange, der er fjernet på Spotify, bliver her.',
   syncing: 'Opdaterer…',
   linkSource: '🔗 Forbind til Spotify',
-  linkSourceTitle: 'Fortæl appen, hvilken Spotify-playliste eller -album samlingen kom fra, så den kan opdateres derfra',
+  linkSourceTitle:
+    'Fortæl appen, hvilken Spotify-playliste eller -album samlingen kom fra, så den kan opdateres derfra',
   linkSourcePrompt: 'Indsæt linket til Spotify-playlisten eller -albummet (eller skriv Liked Songs):',
   linkSourceInvalid: 'Det er ikke et link til en Spotify-playliste eller et album.',
   syncDone: (n) => (n ? `Tilføjede ${n} nye sange` : 'Opdateret: ingen nye sange'),
@@ -468,7 +472,8 @@ const da: Messages = {
   browserUnavailable: ' (utilgængelig)',
   browserStarting: ' (starter…)',
   lastDevice: 'Sidst brugte enhed (ikke fundet)',
-  sdkInitError: 'Denne browser kan ikke afspille Spotify (den skal understøtte krypterede medier; brug Chrome eller Edge)',
+  sdkInitError:
+    'Denne browser kan ikke afspille Spotify (den skal understøtte krypterede medier; brug Chrome eller Edge)',
   sdkAuthError: 'Spotify afviste login. Afbryd og forbind Spotify igen',
   sdkAccountError: 'Afspilning i browseren kræver Spotify Premium',
   sdkLoadError: 'Kunne ikke indlæse Spotify-afspilleren (offline?)',
@@ -571,7 +576,8 @@ const da: Messages = {
     artist: 'Hvem synger?',
   },
   modeHelp: {
-    timeline: 'Hitster-regler: placér hver sang før, mellem eller efter kortene på jeres tidslinje. Et rigtigt kort bliver liggende.',
+    timeline:
+      'Hitster-regler: placér hver sang før, mellem eller efter kortene på jeres tidslinje. Et rigtigt kort bliver liggende.',
     guess: 'Sig titel, kunstner og år. Ét point for hver.',
     closest: 'Alle hold gætter året på én gang. Tættest på får et point, det præcise år to.',
     decade: 'Vælg det årti, sangen er fra. Hurtigt og godt for de yngste.',

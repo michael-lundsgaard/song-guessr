@@ -35,7 +35,8 @@ export async function saveLibrary(lib: Library): Promise<void> {
 
 export const songYear = (s: Song) => s.yearOverride ?? s.spotifyYear;
 
-const SUSPECT_ALBUM_RE = /remaster|greatest|best of|hits|collection|anniversary|deluxe|edition|live|anthology|essential/i;
+const SUSPECT_ALBUM_RE =
+  /remaster|greatest|best of|hits|collection|anniversary|deluxe|edition|live|anthology|essential/i;
 
 /** Spotify's year is the album's release year, which is often a later remaster or compilation. */
 export function isYearSuspect(s: Song) {
@@ -46,7 +47,8 @@ export function isYearSuspect(s: Song) {
 export const decadeOf = (year: number | null | undefined) => (year == null ? null : Math.floor(year / 10) * 10);
 
 // Parenthesised parts that mark a version of a song rather than its name: "(Remastered 2011)", "(feat. X)".
-const VERSION_PART_RE = /remaster|live|version|mono|stereo|edit|mix|feat|ft\.|with |from |deluxe|anniversary|recorded|demo/i;
+const VERSION_PART_RE =
+  /remaster|live|version|mono|stereo|edit|mix|feat|ft\.|with |from |deluxe|anniversary|recorded|demo/i;
 
 /** The song's name without version suffixes: "Heroes - 2017 Remaster" -> "Heroes". */
 export function stripVersion(title: string) {
@@ -138,8 +140,7 @@ export function setYear(lib: Library, id: string, year: number | null): Library 
 }
 
 /** Marks Spotify's year as right, so the song is no longer flagged ⚠. */
-export const confirmYear = (lib: Library, id: string) =>
-  mapSongs(lib, [id], (s) => ({ ...s, yearConfirmed: true }));
+export const confirmYear = (lib: Library, id: string) => mapSongs(lib, [id], (s) => ({ ...s, yearConfirmed: true }));
 
 /**
  * Keeps one version of a song and deletes the others. The kept song gets every collection of the group
@@ -152,7 +153,10 @@ export function mergeSongs(lib: Library, keepId: string, ids: string[]): Library
   const others = group.filter((s) => s.id !== keepId);
   const years = group.map(songYear).filter((y): y is number => y != null);
   const earliest = years.length ? Math.min(...years) : null;
-  let next = deleteSongs(lib, others.map((s) => s.id));
+  let next = deleteSongs(
+    lib,
+    others.map((s) => s.id),
+  );
   next = mapSongs(next, [keepId], (s) => ({
     ...s,
     collectionIds: [...new Set(group.flatMap((g) => g.collectionIds))],
