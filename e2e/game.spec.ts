@@ -73,3 +73,58 @@ test('a game in progress survives a reload', async ({ page }) => {
   await page.reload();
   await expect(page.locator('.verdict')).toBeVisible();
 });
+
+async function startGame(page: import('@playwright/test').Page, mode: RegExp) {
+  await page.goto('/');
+  await page.getByRole('button', { name: mode }).click();
+  await page.getByText('Party').click();
+  await page.getByRole('button', { name: 'Start game' }).click();
+}
+
+test('closest year: every team guesses, the closest scores', async ({ page }) => {
+  await seed(page, makeLibrary(), { 'sg.page': 'play' });
+  await startGame(page, /Closest year/);
+  await expect(page.getByText('Everyone guesses')).toBeVisible();
+  const reveal = page.getByRole('button', { name: /Reveal/ });
+  await expect(reveal).toBeDisabled();
+  const inputs = page.locator('.guess-input');
+  await expect(inputs).toHaveCount(2);
+  await inputs.nth(0).fill('1960');
+  await inputs.nth(0).press('Enter'); // moves to the next team
+  await expect(inputs.nth(1)).toBeFocused();
+  await inputs.nth(1).fill('2023');
+  await page.screenshot(shot('closest-guessing'));
+  await inputs.nth(1).press('Enter'); // reveals
+  await expect(page.locator('.guess.scored')).not.toHaveCount(0);
+  const scores = await page.locator('.team-score b').allTextContents();
+  expect(scores.map(Number).reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+  await page.screenshot(shot('closest-revealed'));
+});
+
+test('which decade: pick, confirm, see the answer', async ({ page }) => {
+  await seed(page, makeLibrary(), { 'sg.page': 'play' });
+  await startGame(page, /Which decade/);
+  const choices = page.locator('.choice-button');
+  await expect(choices).toHaveCount(7); // 1960s–2020s in the fixture
+  await choices.nth(2).click();
+  await expect(page.locator('.choice-button.selected')).toHaveCount(1);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.verdict')).toBeVisible();
+  await expect(page.locator('.choice-button.right')).toHaveCount(1);
+  await page.screenshot(shot('decade-revealed'));
+});
+
+test("who's singing: four artists, one right", async ({ page }) => {
+  await seed(page, makeLibrary(), { 'sg.page': 'play' });
+  await startGame(page, /Who's singing/);
+  const choices = page.locator('.choice-button');
+  await expect(choices).toHaveCount(4);
+  await choices.first().click();
+  await page.getByRole('button', { name: /Confirm answer/ }).click();
+  await expect(page.locator('.verdict')).toBeVisible();
+  await expect(page.locator('.choice-button.right')).toHaveCount(1);
+  await page.screenshot(shot('artist-revealed'));
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.verdict')).toHaveCount(0);
+  await expect(page.locator('.choice-button')).toHaveCount(4);
+});

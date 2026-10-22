@@ -46,8 +46,9 @@ Built, not yet played for real.
 - [x] Timeline: pick a slot, then confirm it (button or Enter), so a misclick can be changed.
 - [x] Timeline extra points (setup option): +1 each for the exact year, the artist and the title, whether or not the card was placed right. They only break a tie on cards.
 - [ ] Timeline "steal": another team may place a card the current team got wrong.
-- [ ] **Closest year**: everyone guesses the year; closest wins the point, and an exact year scores a bonus.
-- [ ] **Decade round** or **artist speed round**: quick formats for younger players.
+- [x] **Closest year**: everyone guesses the year; closest wins the point, and an exact year scores a bonus.
+- [x] **Which decade?** and **Who's singing?** (four artists to choose from): quick formats for younger players. A ≈ year also accepts the decade before.
+- [ ] More ideas: a speed round (first team to buzz), "finish the lyric", a team-vs-team Timeline "steal".
 
 ## 6. Nice to have
 

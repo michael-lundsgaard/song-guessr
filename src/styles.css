@@ -1163,9 +1163,30 @@ button.mini.big-icon {
   }
 
   .revealed-card img {
-    width: 130px;
-    height: 130px;
+    width: 110px;
+    height: 110px;
   }
+
+  .card-year {
+    font-size: 46px;
+  }
+
+  .card-title {
+    font-size: 19px;
+  }
+}
+
+/* Never let the content push past the card: the cover gives way first. */
+.revealed-card img {
+  flex-shrink: 1;
+  min-height: 0;
+  object-fit: cover;
+}
+
+.revealed-card .card-title,
+.revealed-card .card-artist,
+.revealed-card .card-year {
+  flex: none;
 }
 
 .awards {
@@ -1201,4 +1222,103 @@ button.mini.big-icon {
 .lang-toggle button.active {
   background: var(--panel-2);
   color: var(--text);
+}
+
+/* Closest year */
+
+.guesses {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.guess {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.guess.scored {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.guess-team {
+  flex: 1;
+  font-size: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guess-input {
+  width: 110px;
+  font-size: 22px;
+  text-align: center;
+}
+
+.guess-year {
+  font-size: 22px;
+  min-width: 60px;
+  text-align: right;
+}
+
+.guess-points {
+  color: var(--accent);
+  font-size: 20px;
+}
+
+/* Which decade / Who's singing */
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.mode-artist .choices {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.choice-button {
+  min-height: 56px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--panel);
+  font-size: 18px;
+  font-weight: 600;
+  padding: 8px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.choice-button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.choice-button:disabled {
+  opacity: 1;
+}
+
+.choice-button.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice-button.right {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.choice-button.wrong {
+  border-color: var(--danger);
+  color: var(--danger);
 }

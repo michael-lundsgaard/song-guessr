@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { compareTeams, endGame, markPlayed, nextTurn, place, reveal, toggleAward, type Game } from '../game';
-import { isYearSuspect, songYear } from '../library';
+import {
+  answer,
+  compareTeams,
+  endGame,
+  isTurnBased,
+  markPlayed,
+  nextTurn,
+  place,
+  reveal,
+  revealClosest,
+  setGuess,
+  toggleAward,
+  type Game,
+} from '../game';
+import { useT } from '../i18n';
+import { decadeOf, isYearSuspect, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
 import { PlayerBar } from './PlayerBar';
-import { useT } from '../i18n';
 
 interface Props {
   lib: Library;
@@ -23,16 +36,27 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
   const round = game.round;
   const song = round ? lib.songs[round.songId] : null;
   const team = game.teams[game.turn];
+  const mode = game.setup.mode;
   const isPlayingRound = !!song && player.current?.uri === song.uri;
-  const isTimeline = game.setup.mode === 'timeline';
 
-  // Timeline: the slot the team picked, placed only once they confirm.
-  const [pendingSlot, setPendingSlot] = useState<number | null>(null);
-  useEffect(() => setPendingSlot(null), [round?.songId]);
-  function confirmPlacement() {
-    if (pendingSlot == null) return;
-    onChange(place(game, lib, pendingSlot));
-    setPendingSlot(null);
+  // An answer picked but not yet confirmed: a timeline slot, a decade or an artist.
+  const [pending, setPending] = useState<number | string | null>(null);
+  useEffect(() => setPending(null), [round?.songId]);
+
+  function confirmPending() {
+    if (pending == null) return;
+    onChange(mode === 'timeline' ? place(game, lib, pending as number) : answer(game, lib, pending));
+    setPending(null);
+  }
+
+  const canReveal = mode !== 'closest' || !!round?.guesses?.some((g) => g != null);
+
+  /** Enter / the main button before the card is shown. */
+  function resolveRound() {
+    if (mode === 'guess') onChange(reveal(game));
+    else if (mode === 'closest') {
+      if (canReveal) onChange(revealClosest(game, lib));
+    } else confirmPending();
   }
 
   function playSong(s: Song) {
@@ -55,7 +79,7 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
     onChange(endGame(game));
   }
 
-  // Keyboard: space = play/pause, R = replay, Enter = reveal, → = next song.
+  // Keyboard: space = play/pause, R = replay, Enter = reveal / confirm, → = next song.
   const keys = useRef<(e: KeyboardEvent) => void>();
   keys.current = (e) => {
     if ((e.target as HTMLElement).closest('input, textarea, select')) return;
@@ -67,8 +91,7 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
       if (isPlayingRound) void replay();
     } else if (e.key === 'Enter' && round && !round.revealed) {
       e.preventDefault();
-      if (isTimeline) confirmPlacement();
-      else onChange(reveal(game));
+      resolveRound();
     } else if (e.key === 'ArrowRight' && round?.revealed) {
       next();
     }
@@ -87,10 +110,10 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
           <div className="trophy">🏆</div>
           <h2>{game.winner >= 0 ? t.wins(game.teams[game.winner].name) : t.draw}</h2>
           <ol className="final-scores">
-            {ranked.map((team) => (
-              <li key={team.name}>
-                {team.name} <b>{team.score}</b>
-                {game.setup.extraPoints && <span className="muted">{t.extraSuffix(team.bonus ?? 0)}</span>}
+            {ranked.map((tm) => (
+              <li key={tm.name}>
+                {tm.name} <b>{tm.score}</b>
+                {game.setup.extraPoints && <span className="muted">{t.extraSuffix(tm.bonus ?? 0)}</span>}
               </li>
             ))}
           </ol>
@@ -103,38 +126,47 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
     );
   }
 
+  const pickLabel = mode === 'timeline' ? t.pickSpot : t.pickAnswer;
+  const confirmLabel = mode === 'timeline' ? t.confirmPlacement : t.confirmAnswer;
   const mainAction = !round ? null : round.revealed ? (
     <button className="primary big" onClick={next}>
       {t.nextSong}
     </button>
-  ) : isTimeline ? (
-    <button className="primary big" disabled={pendingSlot == null} onClick={confirmPlacement}>
-      {pendingSlot == null ? t.pickSpot : t.confirmPlacement}
+  ) : mode === 'guess' || mode === 'closest' ? (
+    <button className="primary big" disabled={!canReveal} onClick={resolveRound}>
+      {t.reveal}
     </button>
   ) : (
-    <button className="primary big" onClick={() => onChange(reveal(game))}>
-      {t.reveal}
+    <button className="primary big" disabled={pending == null} onClick={confirmPending}>
+      {pending == null ? pickLabel : confirmLabel}
     </button>
   );
 
+  const hint = {
+    timeline: t.hintTimeline,
+    guess: t.hintGuess,
+    closest: t.hintClosest,
+    decade: t.hintDecade,
+    artist: t.hintArtist,
+  }[mode];
+  const songDecade = song ? decadeOf(songYear(song)) : null;
+
   return (
-    <div className={`game mode-${game.setup.mode}`}>
+    <div className={`game mode-${mode}`}>
       <div className="scoreboard">
-        {game.teams.map((team, i) => (
-          <div key={i} className={`team-score${i === game.turn ? ' current' : ''}`}>
-            <span>{team.name}</span>
-            <b>{team.score}</b>
-            {isTimeline && game.setup.extraPoints && (
+        {game.teams.map((tm, i) => (
+          <div key={i} className={`team-score${isTurnBased(mode) && i === game.turn ? ' current' : ''}`}>
+            <span>{tm.name}</span>
+            <b>{tm.score}</b>
+            {mode === 'timeline' && game.setup.extraPoints && (
               <span className="muted small-note" title={t.extraOnlyTie}>
-                +{team.bonus ?? 0}
+                +{tm.bonus ?? 0}
               </span>
             )}
           </div>
         ))}
         <div className="spacer" />
-        <span className="muted">
-          {t.progress(game.roundsPlayed + 1, game.deck.length, game.setup.target)}
-        </span>
+        <span className="muted">{t.progress(game.roundsPlayed + 1, game.deck.length, game.setup.target)}</span>
         <button className="ghost small" onClick={finish}>
           {t.endGame}
         </button>
@@ -158,21 +190,60 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
 
           <div className="stage-info">
             <p className="turn">
-              <b>{t.turn(team.name)}</b>
+              <b>{isTurnBased(mode) ? t.turn(team.name) : t.everyoneGuesses}</b>
             </p>
-            {!round.revealed && (
-              <p className="muted hint">
-                {isTimeline ? t.hintTimeline : t.hintGuess}
-              </p>
-            )}
-            {isTimeline && round.revealed && (
+            {!round.revealed && <p className="muted hint">{hint}</p>}
+
+            {mode === 'timeline' && round.revealed && (
               <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
                 {round.correct ? t.correct : t.wrong(yearLabel(song))}
               </p>
             )}
+
+            {mode === 'closest' && (
+              <ClosestGuesses
+                game={game}
+                song={song}
+                onGuess={(i, year) => onChange(setGuess(game, i, year))}
+                onDone={resolveRound}
+              />
+            )}
+
+            {mode === 'decade' && (
+              <Choices
+                options={game.decadeChoices ?? []}
+                label={(d) => t.decade(d as number)}
+                pending={pending}
+                round={round}
+                answer={songDecade}
+                onPick={setPending}
+              />
+            )}
+            {mode === 'decade' && round.revealed && (
+              <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
+                {round.correct ? t.correctAnswer : t.wrongDecade(t.decade(songDecade!))}
+              </p>
+            )}
+
+            {mode === 'artist' && (
+              <Choices
+                options={round.options ?? []}
+                label={(a) => String(a)}
+                pending={pending}
+                round={round}
+                answer={song.artists[0] ?? null}
+                onPick={setPending}
+              />
+            )}
+            {mode === 'artist' && round.revealed && (
+              <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
+                {round.correct ? t.correctAnswer : t.wrongArtist(song.artists[0] ?? '?')}
+              </p>
+            )}
+
             {round.awarded && (
               <div className="awards">
-                {isTimeline && <span className="muted">{t.extraPointsLabel}</span>}
+                {mode === 'timeline' && <span className="muted">{t.extraPointsLabel}</span>}
                 {(['title', 'artist', 'year'] as const).map((field) => (
                   <button
                     key={field}
@@ -180,24 +251,29 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
                     onClick={() => onChange(toggleAward(game, field))}
                   >
                     {round.awarded![field] ? '✓' : '+1'}{' '}
-                    {field === 'title' ? t.awardTitle : field === 'artist' ? t.awardArtist : isTimeline ? t.awardExactYear : t.awardYear}
+                    {field === 'title'
+                      ? t.awardTitle
+                      : field === 'artist'
+                        ? t.awardArtist
+                        : mode === 'timeline'
+                          ? t.awardExactYear
+                          : t.awardYear}
                   </button>
                 ))}
               </div>
             )}
-            {player.error && <p className="error-text">{player.error}</p>}
           </div>
         </div>
       )}
 
-      {isTimeline && round && (
+      {mode === 'timeline' && round && (
         <Timeline
           lib={lib}
           ids={team.timeline}
           placing={!round.revealed}
-          selected={pendingSlot}
+          selected={typeof pending === 'number' ? pending : null}
           highlight={round.revealed && round.correct ? round.songId : undefined}
-          onSelect={setPendingSlot}
+          onSelect={setPending}
         />
       )}
 
@@ -235,6 +311,92 @@ function RevealedCard({ song }: { song: Song }) {
       </div>
       <div className="card-title">{song.title}</div>
       <div className="card-artist">{song.artists.join(', ')}</div>
+    </div>
+  );
+}
+
+/** Closest year: a year field per team; afterwards each guess with how far off it was and the points. */
+function ClosestGuesses(props: {
+  game: Game;
+  song: Song;
+  onGuess: (team: number, year: number | null) => void;
+  onDone: () => void;
+}) {
+  const t = useT();
+  const round = props.game.round!;
+  const year = songYear(props.song)!;
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  return (
+    <div className="guesses">
+      {props.game.teams.map((team, i) => {
+        const guess = round.guesses?.[i] ?? null;
+        const points = round.points?.[i] ?? 0;
+        return (
+          <label key={i} className={`guess${round.revealed && points ? ' scored' : ''}`}>
+            <span className="guess-team">{team.name}</span>
+            {round.revealed ? (
+              <>
+                <b className="guess-year">{guess ?? '–'}</b>
+                <span className="muted">{guess == null ? t.noGuess : t.yearsOff(Math.abs(guess - year))}</span>
+                {points > 0 && <b className="guess-points">{t.plusPoints(points)}</b>}
+              </>
+            ) : (
+              <input
+                ref={(el) => {
+                  inputs.current[i] = el;
+                }}
+                className="guess-input"
+                inputMode="numeric"
+                placeholder={t.yearPlaceholder}
+                value={guess ?? ''}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  props.onGuess(i, digits ? Number(digits) : null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  e.preventDefault();
+                  // Enter moves on to the next team's field; on the last one it reveals.
+                  const nextInput = inputs.current[i + 1];
+                  if (nextInput) nextInput.focus();
+                  else props.onDone();
+                }}
+              />
+            )}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Big answer buttons (decades or artists). After the reveal the right answer turns green, a wrong pick red. */
+function Choices(props: {
+  options: (number | string)[];
+  label: (option: number | string) => string;
+  pending: number | string | null;
+  round: NonNullable<Game['round']>;
+  answer: number | string | null;
+  onPick: (option: number | string) => void;
+}) {
+  const { round } = props;
+  const stateOf = (o: number | string) => {
+    if (!round.revealed) return o === props.pending ? ' selected' : '';
+    if (o === props.answer) return ' right';
+    return o === round.pick ? ' wrong' : '';
+  };
+  return (
+    <div className="choices">
+      {props.options.map((o) => (
+        <button
+          key={String(o)}
+          className={`choice-button${stateOf(o)}`}
+          disabled={round.revealed}
+          onClick={() => props.onPick(o)}
+        >
+          {props.label(o)}
+        </button>
+      ))}
     </div>
   );
 }

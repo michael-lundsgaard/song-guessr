@@ -7,6 +7,9 @@ import type { Library } from '../types';
 const MODES: { mode: Mode; defaultTarget: number }[] = [
   { mode: 'timeline', defaultTarget: 10 },
   { mode: 'guess', defaultTarget: 15 },
+  { mode: 'closest', defaultTarget: 10 },
+  { mode: 'decade', defaultTarget: 10 },
+  { mode: 'artist', defaultTarget: 10 },
 ];
 
 export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Setup) => void }) {

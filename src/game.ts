@@ -1,7 +1,7 @@
 import { decadeOf, isYearSuspect, songYear } from './library';
 import type { Library, Song } from './types';
 
-export type Mode = 'timeline' | 'guess';
+export type Mode = 'timeline' | 'guess' | 'closest' | 'decade' | 'artist';
 
 export interface GameSetup {
   mode: Mode;
@@ -9,7 +9,7 @@ export interface GameSetup {
   /** Empty means every decade. */
   decades: number[];
   teams: string[];
-  /** Timeline: cards to win. Guess: points to win. */
+  /** Timeline: cards to win. Other modes: points to win. */
   target: number;
   /** Start each song somewhere in the middle (harder). */
   randomStart: boolean;
@@ -34,6 +34,13 @@ export interface Round {
   correct?: boolean;
   /** Guess: which parts the team got right (each is a point). */
   awarded?: { title: boolean; artist: boolean; year: boolean };
+  /** Closest year: each team's guess (by team index), and the points each team got. */
+  guesses?: (number | null)[];
+  points?: number[];
+  /** Which decade / Who's singing: the team's answer (decade start year, or artist name). */
+  pick?: number | string;
+  /** Who's singing: the artists to choose from. */
+  options?: string[];
 }
 
 export interface Game {
@@ -46,7 +53,14 @@ export interface Game {
   roundsPlayed: number;
   /** Index of the winning team, or -1 for a draw, once the game is over. */
   winner: number | null;
+  /** Which decade: the decades to choose from (every decade in the deck). */
+  decadeChoices?: number[];
+  /** Who's singing: the answer options for every song in the deck, made when the game starts. */
+  artistOptions?: Record<string, string[]>;
 }
+
+/** Modes where the team whose turn it is answers alone (in Closest year everyone answers). */
+export const isTurnBased = (mode: Mode) => mode !== 'closest';
 
 // --- Deck ---
 
@@ -84,8 +98,22 @@ function buildDeck(songs: Song[], recent: string[]): string[] {
 
 // --- Game flow (each returns a new Game) ---
 
+const mainArtist = (s: Song) => s.artists[0] ?? '';
+
+/** Four artists to choose from: the right one and three others from the deck, shuffled. */
+function artistOptionsFor(songs: Song[]): Record<string, string[]> {
+  const artists = [...new Set(songs.map(mainArtist))];
+  return Object.fromEntries(
+    songs.map((s) => {
+      const others = shuffle(artists.filter((a) => a !== mainArtist(s))).slice(0, 3);
+      return [s.id, shuffle([mainArtist(s), ...others])];
+    }),
+  );
+}
+
 export function newGame(lib: Library, setup: GameSetup, recent: string[]): Game {
-  const deck = buildDeck(eligibleSongs(lib, setup), recent);
+  const songs = eligibleSongs(lib, setup);
+  const deck = buildDeck(songs, recent);
   const teams: Team[] = setup.teams.map((name) => ({ name, score: 0, timeline: [] }));
   if (setup.mode === 'timeline') {
     // Hitster rules: every team starts with one face-up card.
@@ -95,13 +123,21 @@ export function newGame(lib: Library, setup: GameSetup, recent: string[]): Game 
       team.score = team.timeline.length;
     }
   }
-  return startRound({ setup, teams, deck, turn: 0, round: null, roundsPlayed: 0, winner: null });
+  const game: Game = { setup, teams, deck, turn: 0, round: null, roundsPlayed: 0, winner: null };
+  if (setup.mode === 'decade') {
+    game.decadeChoices = [...new Set(songs.map((s) => decadeOf(songYear(s))!))].sort((a, b) => a - b);
+  }
+  if (setup.mode === 'artist') game.artistOptions = artistOptionsFor(songs);
+  return startRound(game);
 }
 
 function startRound(game: Game): Game {
   const [songId, ...deck] = game.deck;
   if (!songId) return finish(game);
-  return { ...game, deck, round: { songId, revealed: false } };
+  const round: Round = { songId, revealed: false };
+  if (game.setup.mode === 'closest') round.guesses = game.teams.map(() => null);
+  if (game.setup.mode === 'artist') round.options = game.artistOptions?.[songId] ?? [];
+  return { ...game, deck, round };
 }
 
 /** Ranks by score, then by extra points (the tiebreaker). */
@@ -163,6 +199,43 @@ export function place(game: Game, lib: Library, index: number): Game {
   });
   const awarded = game.setup.extraPoints ? { title: false, artist: false, year: false } : undefined;
   return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct, awarded } };
+}
+
+/** Closest year: records one team's guess (null clears it). */
+export function setGuess(game: Game, team: number, year: number | null): Game {
+  const round = game.round;
+  if (!round?.guesses || round.revealed) return game;
+  const guesses = round.guesses.map((g, i) => (i === team ? year : g));
+  return { ...game, round: { ...round, guesses } };
+}
+
+/** Closest year: the team(s) closest to the year get a point, and an exact year one more. */
+export function revealClosest(game: Game, lib: Library): Game {
+  const round = game.round;
+  if (!round?.guesses || round.revealed) return game;
+  const year = songYear(lib.songs[round.songId])!;
+  const distances = round.guesses.map((g) => (g == null ? Infinity : Math.abs(g - year)));
+  const best = Math.min(...distances);
+  const points = distances.map((d) => (d === Infinity || d !== best ? 0 : d === 0 ? 2 : 1));
+  const teams = game.teams.map((t, i) => ({ ...t, score: t.score + points[i] }));
+  return { ...game, teams, round: { ...round, revealed: true, points } };
+}
+
+/**
+ * Which decade / Who's singing: the current team's answer. A ⚠ year may be a later remaster or
+ * compilation year, so the decade before also counts for those songs.
+ */
+export function answer(game: Game, lib: Library, pick: number | string): Game {
+  const round = game.round;
+  if (!round || round.revealed) return game;
+  const song = lib.songs[round.songId];
+  const decade = decadeOf(songYear(song));
+  const correct =
+    game.setup.mode === 'artist'
+      ? pick === mainArtist(song)
+      : pick === decade || (isYearSuspect(song) && pick === decade! - 10);
+  const teams = game.teams.map((t, i) => (i === game.turn && correct ? { ...t, score: t.score + 1 } : t));
+  return { ...game, teams, round: { ...round, revealed: true, pick, correct } };
 }
 
 // --- Persistence (this browser only) ---
