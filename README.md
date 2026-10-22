@@ -37,6 +37,8 @@ Note: Spotify only lets development-mode apps read the songs of playlists you ow
 
 Songs already in the library are never fetched again.
 
+Collections made from **Liked Songs** (♥, always at the top), a playlist or an album (♫) remember where they came from. Their **↻ Update from Spotify** button fetches the list again and adds new songs, e.g. songs you liked since. Songs removed on Spotify stay in the collection.
+
 **Search** searches Spotify as you type. ▶ previews a result, **+ Add** adds it. Use this for songs you only know by name: you see which version you get (original album, compilation, live…).
 
 ## Playback

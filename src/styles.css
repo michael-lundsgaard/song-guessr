@@ -1431,3 +1431,16 @@ button.mini.big-icon {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.nav-icon {
+  display: inline-block;
+  width: 1.3em;
+  color: var(--accent);
+}
+
+.view-header .source {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}

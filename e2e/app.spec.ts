@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { makeLibrary, makeTimelineGame, seed } from './fixtures';
+import { fakeLogin, makeLibrary, makeTimelineGame, seed } from './fixtures';
 
 const shot = (name: string) => ({ path: `e2e/.results/screens/${name}.png` });
 const background = (page: import('@playwright/test').Page) =>
@@ -72,4 +72,26 @@ test('language: a Danish browser starts in Danish', async ({ browser }) => {
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Bibliotek' })).toBeVisible();
   await context.close();
+});
+
+test('liked songs: pinned first with a heart, and can be updated from Spotify', async ({ page }) => {
+  const lib = makeLibrary();
+  // An older library: the collection has no source yet and is recognised by its name.
+  lib.collections.liked = { id: 'liked', name: 'Liked Songs', createdAt: 0 };
+  lib.collections.alpha = { id: 'alpha', name: 'Alpha', createdAt: 0, source: { kind: 'playlist', id: 'x' } };
+  for (const id of ['song001', 'song002']) lib.songs[id].collectionIds.push('liked');
+  await seed(page, lib, fakeLogin());
+  await page.goto('/');
+  const items = page.locator('.sidebar .nav-item');
+  // All songs, Not in a collection, Duplicates, then collections: Liked Songs first.
+  await expect(items.nth(3)).toContainText('♥Liked Songs');
+  await expect(items.nth(4)).toContainText('♫Alpha');
+  await items.nth(3).click();
+  await expect(page.getByText('♥ Your Spotify Liked Songs')).toBeVisible();
+  const update = page.getByRole('button', { name: '↻ Update from Spotify' });
+  await expect(update).toBeEnabled();
+  await update.click();
+  // Spotify is blocked in tests, so the update reports an error instead of hanging.
+  await expect(page.locator('.view-header .source .muted').last()).toContainText(/Liked Songs|failed|Couldn't/i);
+  await page.screenshot(shot('liked-songs'));
 });

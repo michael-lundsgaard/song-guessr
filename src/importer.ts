@@ -1,7 +1,7 @@
 import { t } from './i18n';
 import type { ImportItem } from './parse';
 import { fetchAlbum, fetchLikedSongs, fetchPlaylist, fetchTrack, SpotifyError } from './spotify';
-import type { Library, SongData } from './types';
+import type { CollectionSource, Library, SongData } from './types';
 
 export interface LogEntry {
   level: 'ok' | 'info' | 'warn' | 'error';
@@ -14,7 +14,7 @@ export interface ImportResult {
   /** Every song the import resolved to, including ones already in the library. */
   songIds: string[];
   /** One group per playlist/album, used to create a collection per playlist. */
-  groups: { name: string; songIds: string[] }[];
+  groups: { name: string; songIds: string[]; source: CollectionSource }[];
   yearHints: Record<string, number>;
   log: LogEntry[];
   failed: number;
@@ -69,7 +69,8 @@ export async function runImport(
             ? await fetchLikedSongs((n) => onProgress(t().loadingCount('liked', n)))
             : await fetchAlbum(item.id);
       list.tracks.forEach((d) => record(d));
-      result.groups.push({ name: list.name, songIds: list.tracks.map((t) => t.id) });
+      const source: CollectionSource = item.kind === 'liked' ? { kind: 'liked' } : { kind: item.kind, id: item.id };
+      result.groups.push({ name: list.name, songIds: list.tracks.map((t) => t.id), source });
       log('ok', t().listLoaded(item.kind, list.name, list.tracks.length));
       if (list.skipped) log('warn', t().listSkipped(list.name, list.skipped));
     } catch (e) {

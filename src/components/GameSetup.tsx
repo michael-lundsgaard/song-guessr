@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { eligibleSongs, forgetPlayed, loadLastSetup, loadRecent, type GameSetup as Setup, type Mode } from '../game';
-import { decadeOf, isYearSuspect, songYear } from '../library';
+import { compareCollections, decadeOf, isYearSuspect, songYear } from '../library';
 import { useT } from '../i18n';
 import type { Library } from '../types';
 import { RulesList } from './Rules';
@@ -15,7 +15,7 @@ const MODES: { mode: Mode; defaultTarget: number }[] = [
 
 export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Setup) => void }) {
   const t = useT();
-  const collections = Object.values(lib.collections).sort((a, b) => a.name.localeCompare(b.name));
+  const collections = Object.values(lib.collections).sort(compareCollections);
   const [setup, setSetup] = useState<Setup>(() => {
     const last = loadLastSetup();
     return {
@@ -93,6 +93,7 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
                 checked={setup.collectionIds.includes(c.id)}
                 onChange={() => patch({ collectionIds: toggle(setup.collectionIds, c.id) })}
               />
+              {c.source?.kind === 'liked' ? '♥ ' : c.source ? '♫ ' : ''}
               {c.name} <span className="muted">{collectionCounts[c.id] ?? 0}</span>
             </label>
           ))}

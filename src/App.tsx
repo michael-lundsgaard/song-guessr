@@ -5,10 +5,11 @@ import { PlayerBar } from './components/PlayerBar';
 import { PlayPage } from './components/PlayPage';
 import { SettingsDialog } from './components/SettingsDialog';
 import { SongTable, type Sort, type SortKey, type YearActions } from './components/SongTable';
-import { pool, type ImportResult } from './importer';
+import { pool, runImport, type ImportResult } from './importer';
 import {
   addToCollection,
   applyYearHints,
+  compareCollections,
   confirmYear,
   decadeOf,
   deleteCollection,
@@ -22,6 +23,7 @@ import {
   removeFromCollection,
   renameCollection,
   saveLibrary,
+  setCollectionSource,
   setYear,
   songYear,
   upsertSongs,
@@ -30,7 +32,7 @@ import { getPlayer, initBrowserPlayer, pause } from './player';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
 import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
-import type { Library, Song } from './types';
+import type { Collection, Library, Song } from './types';
 import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
 
 type SaveState = 'saved' | 'saving' | 'error';
@@ -128,7 +130,7 @@ export default function App() {
   );
 
   const collections = useMemo(
-    () => Object.values(lib?.collections ?? {}).sort((a, b) => a.name.localeCompare(b.name)),
+    () => Object.values(lib?.collections ?? {}).sort(compareCollections),
     [lib?.collections],
   );
   const allSongs = useMemo(() => Object.values(lib?.songs ?? {}), [lib?.songs]);
@@ -226,11 +228,30 @@ export default function App() {
         for (const group of result.groups) {
           let groupId: string;
           [next, groupId] = ensureCollection(next, group.name);
+          next = setCollectionSource(next, groupId, group.source);
           next = addToCollection(next, group.songIds, groupId);
         }
       }
       return next;
     });
+  }
+
+  // "Update from Spotify" for a collection made from Liked Songs, a playlist or an album.
+  const [sync, setSync] = useState<{ id: string; busy: boolean; text: string } | null>(null);
+  async function syncCollection(c: Collection) {
+    if (!c.source || !libRef.current) return;
+    const item = c.source.kind === 'liked' ? ({ kind: 'liked' } as const) : { kind: c.source.kind, id: c.source.id };
+    const before = new Set(allSongs.filter((s) => s.collectionIds.includes(c.id)).map((s) => s.id));
+    setSync({ id: c.id, busy: true, text: t.syncing });
+    try {
+      const result = await runImport([item], libRef.current, (text) => setSync({ id: c.id, busy: true, text }));
+      const error = result.log.find((entry) => entry.level === 'error');
+      if (error) throw new Error(error.text);
+      handleImported(result, { collectionId: c.id, newCollectionName: null, collectionPerPlaylist: false });
+      setSync({ id: c.id, busy: false, text: t.syncDone(result.songIds.filter((id) => !before.has(id)).length) });
+    } catch (e) {
+      setSync({ id: c.id, busy: false, text: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   const toggle = useCallback(
@@ -355,6 +376,7 @@ export default function App() {
               {collections.map((c) => (
                 <SidebarItem
                   key={c.id}
+                  icon={c.source ? (c.source.kind === 'liked' ? '♥' : '♫') : undefined}
                   label={c.name}
                   count={collectionCounts.counts[c.id] ?? 0}
                   active={view === c.id}
@@ -400,6 +422,26 @@ export default function App() {
                     {t.deleteCollection}
                   </button>
                 </>
+              )}
+              {activeCollection?.source && (
+                <span className="source">
+                  <span className="muted">
+                    {activeCollection.source.kind === 'liked'
+                      ? t.sourceLiked
+                      : activeCollection.source.kind === 'playlist'
+                        ? t.sourcePlaylist
+                        : t.sourceAlbum}
+                  </span>
+                  <button
+                    className="ghost small"
+                    title={t.syncTitle}
+                    disabled={!connected || (sync?.busy ?? false)}
+                    onClick={() => syncCollection(activeCollection)}
+                  >
+                    {t.syncButton}
+                  </button>
+                  {sync?.id === activeCollection.id && <span className="muted">{sync.text}</span>}
+                </span>
               )}
               <div className="spacer" />
               <button className={showImport ? 'ghost' : 'primary'} onClick={() => setShowImport((v) => !v)}>
@@ -649,10 +691,13 @@ function LangToggle() {
   );
 }
 
-function SidebarItem(props: { label: string; count: number; active: boolean; onClick: () => void }) {
+function SidebarItem(props: { label: string; icon?: string; count: number; active: boolean; onClick: () => void }) {
   return (
     <button className={`nav-item${props.active ? ' active' : ''}`} onClick={props.onClick}>
-      <span>{props.label}</span>
+      <span>
+        {props.icon && <span className="nav-icon">{props.icon}</span>}
+        {props.label}
+      </span>
       <span className="muted">{props.count}</span>
     </button>
   );

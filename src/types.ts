@@ -17,10 +17,14 @@ export interface Song {
   collectionIds: string[];
 }
 
+/** Where a collection came from on Spotify, so it can be updated from there. */
+export type CollectionSource = { kind: 'liked' } | { kind: 'playlist' | 'album'; id: string };
+
 export interface Collection {
   id: string;
   name: string;
   createdAt: number;
+  source?: CollectionSource;
 }
 
 export interface Library {

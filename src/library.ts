@@ -1,5 +1,5 @@
 import { t } from './i18n';
-import type { Collection, Library, Song, SongData } from './types';
+import type { Collection, CollectionSource, Library, Song, SongData } from './types';
 
 export const emptyLibrary = (): Library => ({
   version: 1,
@@ -19,7 +19,7 @@ export async function loadLibrary(): Promise<Library> {
   if (!json) return emptyLibrary();
   // searchCache belonged to the removed free-text import.
   const { searchCache: _, ...stored } = json;
-  return { ...emptyLibrary(), ...stored };
+  return markLikedSongs({ ...emptyLibrary(), ...stored });
 }
 
 export async function saveLibrary(lib: Library): Promise<void> {
@@ -195,6 +195,26 @@ export function ensureCollection(lib: Library, name: string): [Library, string] 
   const collection: Collection = { id: newId(), name: trimmed, createdAt: Date.now() };
   return [{ ...lib, collections: { ...lib.collections, [collection.id]: collection } }, collection.id];
 }
+
+/** Collections imported from Liked Songs before collections remembered their source. */
+function markLikedSongs(lib: Library): Library {
+  const collections = { ...lib.collections };
+  for (const c of Object.values(collections)) {
+    if (!c.source && c.name.toLowerCase() === 'liked songs') collections[c.id] = { ...c, source: { kind: 'liked' } };
+  }
+  return { ...lib, collections };
+}
+
+/** Remembers where a collection came from on Spotify (kept if it already has a source). */
+export function setCollectionSource(lib: Library, id: string, source: CollectionSource): Library {
+  const c = lib.collections[id];
+  if (!c || c.source) return lib;
+  return { ...lib, collections: { ...lib.collections, [id]: { ...c, source } } };
+}
+
+/** Sidebar order: Liked Songs first, then by name. */
+export const compareCollections = (a: Collection, b: Collection) =>
+  Number(b.source?.kind === 'liked') - Number(a.source?.kind === 'liked') || a.name.localeCompare(b.name);
 
 export function renameCollection(lib: Library, id: string, name: string): Library {
   const c = lib.collections[id];
