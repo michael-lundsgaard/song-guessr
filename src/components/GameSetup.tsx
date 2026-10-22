@@ -1,26 +1,16 @@
 import { useMemo, useState } from 'react';
 import { eligibleSongs, forgetPlayed, loadLastSetup, loadRecent, type GameSetup as Setup, type Mode } from '../game';
 import { decadeOf, isYearSuspect, songYear } from '../library';
+import { useT } from '../i18n';
 import type { Library } from '../types';
 
-const MODES: { mode: Mode; name: string; help: string; target: string; defaultTarget: number }[] = [
-  {
-    mode: 'timeline',
-    name: 'Timeline',
-    help: 'Hitster rules: place each song before, between or after the cards on your timeline. A correct card stays.',
-    target: 'Cards to win',
-    defaultTarget: 10,
-  },
-  {
-    mode: 'guess',
-    name: 'Guess the song',
-    help: 'Name the title, artist and year. One point for each.',
-    target: 'Points to win',
-    defaultTarget: 15,
-  },
+const MODES: { mode: Mode; defaultTarget: number }[] = [
+  { mode: 'timeline', defaultTarget: 10 },
+  { mode: 'guess', defaultTarget: 15 },
 ];
 
 export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Setup) => void }) {
+  const t = useT();
   const collections = Object.values(lib.collections).sort((a, b) => a.name.localeCompare(b.name));
   const [setup, setSetup] = useState<Setup>(() => {
     const last = loadLastSetup();
@@ -28,7 +18,7 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
       mode: last?.mode ?? 'timeline',
       collectionIds: (last?.collectionIds ?? []).filter((id) => lib.collections[id]),
       decades: last?.decades ?? [],
-      teams: last?.teams ?? ['Team 1', 'Team 2'],
+      teams: last?.teams ?? [t.teamName(1), t.teamName(2)],
       target: last?.target ?? 10,
       // Not remembered: a harder game is a one-off choice.
       randomStart: false,
@@ -62,15 +52,14 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
     return songs.filter((s) => ids.has(s.id)).length;
   }, [songs, recent]);
   const teams = setup.teams.map((t) => t.trim()).filter(Boolean);
-  const mode = MODES.find((m) => m.mode === setup.mode)!;
   const enough = songs.length >= teams.length * 2;
 
   return (
     <div className="game-setup">
-      <h2>New game</h2>
+      <h2>{t.newGame}</h2>
 
       <section>
-        <h3>Game</h3>
+        <h3>{t.gameHeading}</h3>
         <div className="mode-picker">
           {MODES.map((m) => (
             <button
@@ -78,16 +67,16 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
               className={`mode${setup.mode === m.mode ? ' active' : ''}`}
               onClick={() => patch({ mode: m.mode, target: m.defaultTarget })}
             >
-              <b>{m.name}</b>
-              <span className="muted">{m.help}</span>
+              <b>{t.modeNames[m.mode]}</b>
+              <span className="muted">{t.modeHelp[m.mode]}</span>
             </button>
           ))}
         </div>
       </section>
 
       <section>
-        <h3>Songs from</h3>
-        {collections.length === 0 && <p className="muted">Make a collection in the library first.</p>}
+        <h3>{t.songsFrom}</h3>
+        {collections.length === 0 && <p className="muted">{t.makeCollectionFirst}</p>}
         <div className="choice-list">
           {collections.map((c) => (
             <label key={c.id} className="inline choice">
@@ -101,55 +90,54 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           ))}
         </div>
         {decadeCounts.length > 1 && (
-          <div className="decades" title="Leave all off to play every decade">
+          <div className="decades" title={t.decadeFilterTitle}>
             {decadeCounts.map(([d, n]) => (
               <button
                 key={d}
                 className={`decade${setup.decades.includes(d) ? ' active' : ''}`}
                 onClick={() => patch({ decades: toggle(setup.decades, d) })}
               >
-                <span>{String(d).slice(2)}s</span>
+                <span>{t.decadeShort(d)}</span>
                 <b>{n}</b>
               </button>
             ))}
           </div>
         )}
         <p className="muted">
-          {songs.length} songs in the deck
-          {uncertain > 0 && ` · ${uncertain} with an uncertain year (shown as ≈ and judged leniently)`}
+          {t.deckCount(songs.length)}
+          {uncertain > 0 && t.uncertainCount(uncertain)}
         </p>
         {played > 0 && (
           <p className="muted">
-            {played} of these were played in earlier games, so they come last: the next {songs.length - played} songs
-            are all new.{' '}
+            {t.playedNote(played, songs.length - played)}{' '}
             <button
               className="link"
               onClick={() => {
-                if (!confirm('Forget which songs were played? Every song counts as new again.')) return;
+                if (!confirm(t.confirmForgetPlayed)) return;
                 forgetPlayed();
                 setRecent([]);
               }}
             >
-              Forget played songs
+              {t.forgetPlayed}
             </button>
           </p>
         )}
       </section>
 
       <section>
-        <h3>Teams</h3>
+        <h3>{t.teamsHeading}</h3>
         <div className="choice-list">
           {setup.teams.map((name, i) => (
             <span key={i} className="team-input">
               <input
                 value={name}
                 onChange={(e) => patch({ teams: setup.teams.map((t, j) => (j === i ? e.target.value : t)) })}
-                placeholder={`Team ${i + 1}`}
+                placeholder={t.teamName(i + 1)}
               />
               {setup.teams.length > 1 && (
                 <button
                   className="mini"
-                  title="Remove"
+                  title={t.removeTeam}
                   onClick={() => patch({ teams: setup.teams.filter((_, j) => j !== i) })}
                 >
                   ✕
@@ -159,17 +147,17 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           ))}
           <button
             className="ghost small"
-            onClick={() => patch({ teams: [...setup.teams, `Team ${setup.teams.length + 1}`] })}
+            onClick={() => patch({ teams: [...setup.teams, t.teamName(setup.teams.length + 1)] })}
           >
-            + Team
+            {t.addTeam}
           </button>
         </div>
       </section>
 
       <section>
-        <h3>Options</h3>
+        <h3>{t.optionsHeading}</h3>
         <label className="inline">
-          {mode.target}
+          {t.modeTarget[setup.mode]}
           <input
             type="number"
             min={1}
@@ -179,18 +167,18 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
             className="narrow"
           />
         </label>
-        <label className="inline" title="Start each song somewhere in the middle instead of at the beginning">
+        <label className="inline" title={t.randomStartTitle}>
           <input type="checkbox" checked={setup.randomStart} onChange={(e) => patch({ randomStart: e.target.checked })} />
-          Harder: random start
+          {t.randomStart}
         </label>
         {setup.mode === 'timeline' && (
-          <label className="inline" title="After each card, one extra point each for naming the exact year, the artist and the title. They only decide a tie.">
+          <label className="inline" title={t.extraPointsTitle}>
             <input
               type="checkbox"
               checked={!!setup.extraPoints}
               onChange={(e) => patch({ extraPoints: e.target.checked })}
             />
-            Extra points for the exact year, artist and title (tiebreaker)
+            {t.extraPoints}
           </label>
         )}
       </section>
@@ -199,10 +187,10 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
         <button
           className="primary big"
           disabled={!teams.length || !enough}
-          title={enough ? undefined : 'Pick collections with more songs'}
+          title={enough ? undefined : t.needMoreSongs}
           onClick={() => onStart({ ...setup, teams })}
         >
-          Start game
+          {t.startGame}
         </button>
       </section>
     </div>

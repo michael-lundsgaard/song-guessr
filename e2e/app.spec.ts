@@ -45,3 +45,31 @@ test('screens: library and a game in light and dark', async ({ page }) => {
     await page.evaluate(() => sessionStorage.clear());
   }
 });
+
+test('language: switching to Danish translates the app and is remembered', async ({ page }) => {
+  const lib = makeLibrary();
+  await seed(page, lib, { 'sg.game': makeTimelineGame(lib, 4) });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Library' })).toBeVisible();
+  await page.getByRole('button', { name: 'DA', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Bibliotek' })).toBeVisible();
+  await expect(page.getByText('Alle sange').first()).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'da');
+  await page.screenshot(shot('library-da'));
+  await page.reload();
+  await page.getByRole('button', { name: 'Spil', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Vælg en plads på tidslinjen' })).toBeDisabled();
+  await page.locator('.slot').first().click();
+  await page.getByRole('button', { name: /Bekræft placering/ }).click();
+  await expect(page.locator('.verdict')).toContainText(/Rigtigt|Forkert/);
+  await page.screenshot(shot('game-da'));
+});
+
+test('language: a Danish browser starts in Danish', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'da-DK' });
+  const page = await context.newPage();
+  await seed(page, makeLibrary());
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Bibliotek' })).toBeVisible();
+  await context.close();
+});

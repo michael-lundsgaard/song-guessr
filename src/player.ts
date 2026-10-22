@@ -11,6 +11,7 @@ import {
   SpotifyError,
   type Device,
 } from './spotify';
+import { t } from './i18n';
 
 // Plays songs either in this browser tab (Web Playback SDK, so the PC itself is a Spotify device) or on
 // another Spotify Connect device such as the desktop app. One module-level store, read with usePlayer().
@@ -118,10 +119,10 @@ declare global {
 let sdkPlayer: SdkPlayer | null = null;
 let browserDeviceId: string | null = null;
 
-const SDK_ERRORS: Record<string, string> = {
-  initialization_error: "This browser can't play Spotify (it needs encrypted-media support; use Chrome or Edge)",
-  authentication_error: 'Spotify rejected the login. Disconnect and connect Spotify again',
-  account_error: 'Playing in the browser needs Spotify Premium',
+const SDK_ERRORS = {
+  initialization_error: () => t().sdkInitError,
+  authentication_error: () => t().sdkAuthError,
+  account_error: () => t().sdkAccountError,
 };
 
 /** Loads the Web Playback SDK and registers this tab as a Spotify device. Safe to call repeatedly. */
@@ -140,9 +141,9 @@ export function initBrowserPlayer() {
     });
     player.addListener('not_ready', () => set({ sdk: 'loading' }));
     for (const event of ['initialization_error', 'authentication_error', 'account_error'] as const) {
-      player.addListener(event, ({ message }) => set({ sdk: 'error', sdkError: SDK_ERRORS[event] ?? message }));
+      player.addListener(event, ({ message }) => set({ sdk: 'error', sdkError: SDK_ERRORS[event]() || message }));
     }
-    player.addListener('playback_error', ({ message }) => set({ error: `Playback failed: ${message}` }));
+    player.addListener('playback_error', ({ message }) => set({ error: t().playbackFailed(message) }));
     player.addListener('player_state_changed', (s) => {
       if (state.target !== BROWSER) return;
       hideNowPlaying();
@@ -156,7 +157,7 @@ export function initBrowserPlayer() {
   else {
     const script = document.createElement('script');
     script.src = 'https://sdk.scdn.co/spotify-player.js';
-    script.onerror = () => set({ sdk: 'error', sdkError: "Couldn't load the Spotify player (offline?)" });
+    script.onerror = () => set({ sdk: 'error', sdkError: t().sdkLoadError });
     document.head.appendChild(script);
   }
 }
@@ -191,7 +192,7 @@ export function selectTarget(target: string) {
 function targetDeviceId(): string {
   if (state.target !== BROWSER) return state.target;
   if (!browserDeviceId || state.sdk !== 'ready') {
-    throw new Error(state.sdkError || 'The browser player is still starting. Try again in a moment');
+    throw new Error(state.sdkError || t().browserPlayerStarting);
   }
   return browserDeviceId;
 }
@@ -275,8 +276,8 @@ async function run(action: () => Promise<unknown>) {
 }
 
 function describe(e: unknown) {
-  if (e instanceof SpotifyError && e.status === 404) return 'That Spotify device is gone. Pick another one';
-  if (e instanceof SpotifyError && e.status === 403) return `${e.message}. Playback needs Spotify Premium`;
+  if (e instanceof SpotifyError && e.status === 404) return t().deviceGone;
+  if (e instanceof SpotifyError && e.status === 403) return t().needsPremium(e.message);
   return e instanceof Error ? e.message : String(e);
 }
 

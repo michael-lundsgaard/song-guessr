@@ -28,6 +28,8 @@ A home-made Hitster: a Spotify-backed song library (React + Vite, TypeScript) wi
 
 ## Conventions
 
+- All UI text lives in `src/i18n.ts`, in English (`en`, which defines the keys) and Danish (`da`). Components use `const t = useT()`; non-React code uses `t()`. Never hard-code visible text in components. Write Danish as a Dane would say it, not word for word.
+- Colours are CSS tokens on `:root`, with light values under `[data-theme=light]` and the `prefers-color-scheme: light` media query (see `src/theme.ts`). No hard-coded colours in rules.
 - Song years: `songYear()` (override, else Spotify's album year); `isYearSuspect()` flags likely remaster/compilation years.
 - Keep `package-lock.json` out of diffs unless dependencies changed (`npm` rewrites `peer` flags).
 - The shell is Windows with Git Bash and PowerShell; Python is not installed.

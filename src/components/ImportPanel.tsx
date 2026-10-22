@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useT } from '../i18n';
 import { runImport, type ImportResult, type LogEntry } from '../importer';
 import { LIKED_SONGS_LINK, parseImportText } from '../parse';
 import { searchTracks } from '../spotify';
@@ -21,6 +22,7 @@ interface Props {
 const NEW = '__new__';
 
 export function ImportPanel({ lib, connected, defaultCollectionId, onImported }: Props) {
+  const t = useT();
   const [tab, setTab] = useState<'paste' | 'search'>('paste');
   const [target, setTarget] = useState<string>(defaultCollectionId ?? '');
   const [newName, setNewName] = useState('');
@@ -39,19 +41,19 @@ export function ImportPanel({ lib, connected, defaultCollectionId, onImported }:
   const targetPicker = (
     <>
       <label className="inline">
-        Add to
+        {t.addTo}
         <select value={target} onChange={(e) => setTarget(e.target.value)}>
-          <option value="">No collection</option>
+          <option value="">{t.noCollection}</option>
           {collections.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
-          <option value={NEW}>+ New collection…</option>
+          <option value={NEW}>{t.newCollectionOption}</option>
         </select>
       </label>
       {target === NEW && (
-        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Collection name" />
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t.collectionNamePrompt} />
       )}
     </>
   );
@@ -60,10 +62,10 @@ export function ImportPanel({ lib, connected, defaultCollectionId, onImported }:
     <section className="panel import">
       <div className="tabs">
         <button className={tab === 'paste' ? 'active' : undefined} onClick={() => setTab('paste')}>
-          Paste links
+          {t.tabPaste}
         </button>
         <button className={tab === 'search' ? 'active' : undefined} onClick={() => setTab('search')}>
-          Search
+          {t.tabSearch}
         </button>
       </div>
       {tab === 'paste' ? (
@@ -88,7 +90,7 @@ export function ImportPanel({ lib, connected, defaultCollectionId, onImported }:
           }
         />
       )}
-      {!connected && <p className="muted">Connect Spotify (top right) to add songs.</p>}
+      {!connected && <p className="muted">{t.connectToAdd}</p>}
     </section>
   );
 }
@@ -101,6 +103,7 @@ function PasteImport(props: {
   setPerPlaylist: (v: boolean) => void;
   onImport: (result: ImportResult) => void;
 }) {
+  const t = useT();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
@@ -119,7 +122,7 @@ function PasteImport(props: {
     try {
       const result = await runImport(items, props.lib, setProgress);
       props.onImport(result);
-      setLog([{ level: 'ok', text: `Imported ${result.songIds.length} songs` }, ...result.log]);
+      setLog([{ level: 'ok', text: t.importedSongs(result.songIds.length) }, ...result.log]);
       if (!result.failed) setText('');
     } catch (e) {
       setLog([{ level: 'error', text: e instanceof Error ? e.message : String(e) }]);
@@ -130,11 +133,11 @@ function PasteImport(props: {
   }
 
   const summary = [
-    counts.liked && 'Liked Songs',
-    counts.track && `${counts.track} track links`,
-    counts.playlist && `${counts.playlist} playlists`,
-    counts.album && `${counts.album} albums`,
-    unrecognised && `${unrecognised} lines without a Spotify link (use Search for those)`,
+    counts.liked && t.likedSongs,
+    counts.track && t.trackLinks(counts.track),
+    counts.playlist && t.playlists(counts.playlist),
+    counts.album && t.albums(counts.album),
+    unrecognised && t.unrecognisedLines(unrecognised),
   ].filter(Boolean);
 
   return (
@@ -142,27 +145,18 @@ function PasteImport(props: {
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={[
-          'Paste Spotify links, one per line:',
-          'https://open.spotify.com/playlist/…   (playlist → all its songs)',
-          'https://open.spotify.com/album/…      (album → all its songs)',
-          'https://open.spotify.com/track/… (1975)   (single song; a year in brackets is kept)',
-          '',
-          'Liked Songs                            (or use the button below)',
-          '',
-          'Tip: in the Spotify app, click a song, Ctrl+A, Ctrl+C, and paste here (copies the songs as links).',
-        ].join('\n')}
+        placeholder={t.pastePlaceholder}
         rows={8}
         spellCheck={false}
       />
       <div className="import-controls">
-        <span className="muted">{summary.length ? summary.join(' · ') : 'Nothing to import yet'}</span>
+        <span className="muted">{summary.length ? summary.join(' · ') : t.nothingToImport}</span>
         {!counts.liked && (
           <button
             className="ghost small"
-            onClick={() => setText((t) => (t.trim() ? `${t.trimEnd()}\n` : '') + LIKED_SONGS_LINK)}
+            onClick={() => setText((prev) => (prev.trim() ? `${prev.trimEnd()}\n` : '') + LIKED_SONGS_LINK)}
           >
-            ♥ Liked Songs
+            {t.likedButton}
           </button>
         )}
         <div className="spacer" />
@@ -174,11 +168,11 @@ function PasteImport(props: {
               checked={props.perPlaylist}
               onChange={(e) => props.setPerPlaylist(e.target.checked)}
             />
-            Collection per playlist
+            {t.collectionPerPlaylist}
           </label>
         )}
         <button className="primary" disabled={!props.connected || busy || !items.length} onClick={run}>
-          {busy ? progress || 'Importing…' : 'Import'}
+          {busy ? progress || t.importing : t.importButton}
         </button>
       </div>
       {log.length > 0 && (
@@ -201,6 +195,7 @@ function SearchImport(props: {
   targetPicker: ReactNode;
   onAdd: (song: SongData) => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SongData[]>([]);
   const [error, setError] = useState('');
@@ -231,13 +226,13 @@ function SearchImport(props: {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search Spotify: title, artist…"
+          placeholder={t.searchSpotify}
           autoFocus
         />
         {props.targetPicker}
       </div>
       {error && <p className="error-text">{error}</p>}
-      {searching && !results.length && <p className="muted">Searching…</p>}
+      {searching && !results.length && <p className="muted">{t.searching}</p>}
       {results.length > 0 && (
         <table className="songs">
           <tbody>
@@ -252,16 +247,16 @@ function SearchImport(props: {
                   </td>
                   <td className="muted album">
                     {s.album}
-                    {s.albumType === 'compilation' && ' (compilation)'}
+                    {s.albumType === 'compilation' && t.compilationSuffix}
                   </td>
                   <td className="year">{s.spotifyYear ?? '?'}</td>
                   <td className="actions">
                     <PlayButton song={s} />
                     {inLibrary ? (
-                      <span className="muted">In library</span>
+                      <span className="muted">{t.inLibrary}</span>
                     ) : (
                       <button className="ghost small" onClick={() => props.onAdd(s)}>
-                        + Add
+                        {t.add}
                       </button>
                     )}
                   </td>

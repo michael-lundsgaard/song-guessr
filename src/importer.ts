@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { ImportItem } from './parse';
 import { fetchAlbum, fetchLikedSongs, fetchPlaylist, fetchTrack, SpotifyError } from './spotify';
 import type { Library, SongData } from './types';
@@ -28,24 +29,15 @@ export async function pool<T>(items: T[], concurrency: number, fn: (item: T) => 
   await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
 }
 
-const COPY_TIP =
-  'Tip: open it in Spotify, click a song, press Ctrl+A then Ctrl+C, and paste the copied links here instead.';
-
 function describe(e: unknown, kind: string) {
   if (e instanceof SpotifyError && e.status === 403 && /not be registered/i.test(e.message)) {
-    return (
-      `${e.message} — add your Spotify account's email under User Management in the Spotify developer ` +
-      'dashboard, then disconnect and connect again here.'
-    );
+    return t().notRegistered(e.message);
   }
   if (e instanceof SpotifyError && (e.status === 401 || e.status === 403) && kind === 'liked') {
-    return `${e.message} — click Disconnect, then Connect Spotify again to grant access to Liked Songs.`;
+    return t().likedNeedsReconnect(e.message);
   }
   if (e instanceof SpotifyError && (e.status === 404 || e.status === 403) && kind === 'playlist') {
-    return (
-      `not accessible (${e.message}). Spotify only lets apps read playlists you own or collaborate on. ` +
-      COPY_TIP
-    );
+    return t().playlistNotAccessible(e.message);
   }
   return e instanceof Error ? e.message : String(e);
 }
@@ -69,22 +61,21 @@ export async function runImport(
   for (const item of items) {
     if (item.kind !== 'playlist' && item.kind !== 'album' && item.kind !== 'liked') continue;
     try {
-      onProgress(`Loading ${item.kind === 'liked' ? 'Liked Songs' : item.kind}…`);
+      onProgress(t().loadingWhat(item.kind));
       const list =
         item.kind === 'playlist'
-          ? await fetchPlaylist(item.id, (n) => onProgress(`Loading playlist… ${n} tracks`))
+          ? await fetchPlaylist(item.id, (n) => onProgress(t().loadingCount('playlist', n)))
           : item.kind === 'liked'
-            ? await fetchLikedSongs((n) => onProgress(`Loading Liked Songs… ${n} tracks`))
+            ? await fetchLikedSongs((n) => onProgress(t().loadingCount('liked', n)))
             : await fetchAlbum(item.id);
       list.tracks.forEach((d) => record(d));
       result.groups.push({ name: list.name, songIds: list.tracks.map((t) => t.id) });
-      const kindLabel = { playlist: 'Playlist', album: 'Album', liked: 'Collection' }[item.kind];
-      log('ok', `${kindLabel} "${list.name}": ${list.tracks.length} songs`);
-      if (list.skipped) log('warn', `"${list.name}": skipped ${list.skipped} podcast episodes, local files or unavailable items`);
+      log('ok', t().listLoaded(item.kind, list.name, list.tracks.length));
+      if (list.skipped) log('warn', t().listSkipped(list.name, list.skipped));
     } catch (e) {
       result.failed++;
-      const what = item.kind === 'liked' ? 'Liked Songs' : `${item.kind} ${item.id}`;
-      log('error', `Couldn't load ${what}: ${describe(e, item.kind)}`);
+      const what = item.kind === 'liked' ? t().likedSongs : `${item.kind} ${item.id}`;
+      log('error', t().couldNotLoad(what, describe(e, item.kind)));
     }
   }
 
@@ -102,16 +93,16 @@ export async function runImport(
         if (d) record(d, item.yearHint);
         else {
           result.failed++;
-          log('warn', `Track ${item.id} is not playable on Spotify`);
+          log('warn', t().notPlayable(item.id));
         }
       }
     } catch (e) {
       result.failed++;
-      log('error', `Track ${item.id}: ${describe(e, item.kind)}`);
+      log('error', t().trackFailed(item.id, describe(e, item.kind)));
     }
-    onProgress(`Looking up songs… ${++done}/${tracks.length}`);
+    onProgress(t().lookingUp(++done, tracks.length));
   });
-  if (reused) log('ok', `${reused} songs were already in the library (not fetched again)`);
+  if (reused) log('ok', t().alreadyInLibrary(reused));
 
   result.fetched = [...fetched.values()];
   result.songIds = [...songIds];

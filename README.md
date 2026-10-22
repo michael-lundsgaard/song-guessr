@@ -11,6 +11,8 @@ npm run dev
 
 Open **http://127.0.0.1:5173** (use the IP, not `localhost`. Spotify only accepts loopback-IP redirect URIs).
 
+The top bar switches between **English and Danish** (EN / DA; a Danish browser starts in Danish) and between **auto, light and dark** theme.
+
 ## Spotify setup (once)
 
 1. Go to https://developer.spotify.com/dashboard, log in, and **Create app**.

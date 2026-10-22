@@ -10,15 +10,17 @@ import {
   togglePlay,
   usePlayer,
 } from '../player';
+import { useT } from '../i18n';
 
 /** ▶ for one song: plays it, or pauses/resumes it when it is the song already playing. */
 export function PlayButton({ song }: { song: { uri: string; durationMs: number } }) {
+  const t = useT();
   const p = usePlayer();
   const isCurrent = p.current?.uri === song.uri;
   return (
     <button
       className="mini play"
-      title={isCurrent && p.playing ? 'Pause' : 'Play'}
+      title={isCurrent && p.playing ? t.pause : t.play}
       onClick={() => (isCurrent ? togglePlay() : play(song))}
     >
       {isCurrent && p.playing ? '❚❚' : '▶'}
@@ -42,6 +44,7 @@ export function PlayerBar({
   actions?: ReactNode;
   end?: ReactNode;
 }) {
+  const t = useT();
   const p = usePlayer();
   useEffect(() => {
     if (!connected) return;
@@ -51,20 +54,20 @@ export function PlayerBar({
   if (!connected && !actions && !end) return null;
 
   const browserStatus =
-    p.sdk === 'ready' ? '' : p.sdk === 'error' ? ' (unavailable)' : p.sdk === 'loading' ? ' (starting…)' : '';
+    p.sdk === 'ready' ? '' : p.sdk === 'error' ? t.browserUnavailable : p.sdk === 'loading' ? t.browserStarting : '';
   const knownTarget = p.target === BROWSER || p.devices.some((d) => d.id === p.target);
 
   return (
     <div className="player-bar">
       {actions ?? (
         <>
-          <button className="mini" disabled={!p.current} onClick={() => replay()} title="Play again from the start">
+          <button className="mini" disabled={!p.current} onClick={() => replay()} title={t.replayTitle}>
             ⟲
           </button>
-          <button className="mini play" disabled={!p.current} onClick={() => togglePlay()} title="Play / pause">
+          <button className="mini play" disabled={!p.current} onClick={() => togglePlay()} title={t.playPauseTitle}>
             {p.playing ? '❚❚' : '▶'}
           </button>
-          <span className="now muted">{p.current ? (titleFor?.(p.current.uri) ?? '') : 'Nothing playing'}</span>
+          <span className="now muted">{p.current ? (titleFor?.(p.current.uri) ?? '') : t.nothingPlaying}</span>
         </>
       )}
       {p.error && <span className="error-text">{p.error}</span>}
@@ -72,7 +75,7 @@ export function PlayerBar({
       <div className="spacer" />
       {connected && (
         <>
-          <label className="inline" title="Volume">
+          <label className="inline" title={t.volume}>
             🔊
             <input
               type="range"
@@ -84,20 +87,23 @@ export function PlayerBar({
             />
           </label>
           <label className="inline">
-            Play on
+            {t.playOn}
             <select
               value={p.target}
               onFocus={() => refreshDevices()}
               onChange={(e) => selectTarget(e.target.value)}
-              title="Play in this browser tab, or on another Spotify device (open the Spotify app there first)"
+              title={t.playOnTitle}
             >
-              <option value={BROWSER}>This browser{browserStatus}</option>
+              <option value={BROWSER}>
+                {t.thisBrowser}
+                {browserStatus}
+              </option>
               {p.devices.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name} ({d.type.toLowerCase()})
                 </option>
               ))}
-              {!knownTarget && <option value={p.target}>Last used device (not found)</option>}
+              {!knownTarget && <option value={p.target}>{t.lastDevice}</option>}
             </select>
           </label>
         </>

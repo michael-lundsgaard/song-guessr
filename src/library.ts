@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { Collection, Library, Song, SongData } from './types';
 
 export const emptyLibrary = (): Library => ({
@@ -13,7 +14,7 @@ export const newId = () => crypto.randomUUID().slice(0, 8);
 
 export async function loadLibrary(): Promise<Library> {
   const res = await fetch('/api/library');
-  if (!res.ok) throw new Error(`Could not load library (${res.status})`);
+  if (!res.ok) throw new Error(t().couldNotLoadLibrary(res.status));
   const json = await res.json();
   if (!json) return emptyLibrary();
   // searchCache belonged to the removed free-text import.
@@ -27,7 +28,7 @@ export async function saveLibrary(lib: Library): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(lib),
   });
-  if (!res.ok) throw new Error(`Could not save library (${res.status})`);
+  if (!res.ok) throw new Error(t().couldNotSaveLibrary(res.status));
 }
 
 // --- Derived values ---

@@ -1182,3 +1182,23 @@ button.mini.big-icon {
   align-items: center;
   justify-content: center;
 }
+
+.lang-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.lang-toggle button {
+  background: transparent;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.lang-toggle button.active {
+  background: var(--panel-2);
+  color: var(--text);
+}

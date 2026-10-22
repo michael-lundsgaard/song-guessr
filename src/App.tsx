@@ -27,6 +27,7 @@ import {
   upsertSongs,
 } from './library';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
+import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
 import type { Library, Song } from './types';
 import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
@@ -41,6 +42,7 @@ type Page = 'library' | 'play';
 const PAGE_KEY = 'sg.page';
 
 export default function App() {
+  const t = useT();
   const [lib, setLib] = useState<Library | null>(null);
   const [loadError, setLoadError] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('saved');
@@ -239,7 +241,7 @@ export default function App() {
     );
 
   function newCollection() {
-    const name = prompt('Collection name');
+    const name = prompt(t.collectionNamePrompt);
     if (!name?.trim()) return;
     let id = '';
     update((l) => {
@@ -254,13 +256,15 @@ export default function App() {
   if (loadError) {
     return (
       <div className="fatal">
-        <h1>Couldn't load the library</h1>
+        <h1>{t.loadErrorTitle}</h1>
         <p>{loadError}</p>
-        <p className="muted">The library is stored by the dev server — start the app with <code>npm run dev</code>.</p>
+        <p className="muted">
+          {t.loadErrorHelp} <code>npm run dev</code>.
+        </p>
       </div>
     );
   }
-  if (!lib) return <div className="fatal muted">Loading library…</div>;
+  if (!lib) return <div className="fatal muted">{t.loadingLibrary}</div>;
 
   return (
     <div className={`app${page === 'play' ? ' play' : ''}`}>
@@ -269,15 +273,15 @@ export default function App() {
         <nav className="page-tabs">
           {(['library', 'play'] as const).map((p) => (
             <button key={p} className={page === p ? 'active' : undefined} onClick={() => setPage(p)}>
-              {p === 'library' ? 'Library' : 'Play'}
+              {p === 'library' ? t.navLibrary : t.navPlay}
             </button>
           ))}
         </nav>
         <span
           className={`save ${saveState}`}
-          title="Library changes are saved automatically to data/library.json in the project folder"
+          title={t.saveTitle}
         >
-          {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Save failed!' : 'Saved'}
+          {saveState === 'saving' ? t.saveSaving : saveState === 'error' ? t.saveFailed : t.saveSaved}
         </span>
         <div className="spacer" />
         {authError && <span className="error-text">{authError}</span>}
@@ -286,13 +290,13 @@ export default function App() {
             {needsReconnect() ? (
               <button
                 className="primary"
-                title="The app needs new Spotify permissions (e.g. Liked Songs)"
+                title={t.reconnectTitle}
                 onClick={() => login().catch((e) => setAuthError(e.message))}
               >
-                Reconnect Spotify
+                {t.reconnect}
               </button>
             ) : (
-              <span className="connected">● Spotify connected</span>
+              <span className="connected">{t.connected}</span>
             )}
             <button
               className="ghost"
@@ -301,20 +305,21 @@ export default function App() {
                 setConnected(false);
               }}
             >
-              Disconnect
+              {t.disconnect}
             </button>
           </>
         ) : getClientId() ? (
           <button className="primary" onClick={() => login().catch((e) => setAuthError(e.message))}>
-            Connect Spotify
+            {t.connect}
           </button>
         ) : (
           <button className="primary" onClick={() => setSettingsOpen(true)}>
-            Set up Spotify
+            {t.setUpSpotify}
           </button>
         )}
+        <LangToggle />
         <ThemeToggle />
-        <button className="ghost icon" onClick={() => setSettingsOpen(true)} title="Spotify settings">
+        <button className="ghost icon" onClick={() => setSettingsOpen(true)} title={t.settingsTitle}>
           ⚙
         </button>
       </header>
@@ -323,22 +328,22 @@ export default function App() {
         <>
           <aside className="sidebar">
             <nav>
-              <SidebarItem label="All songs" count={allSongs.length} active={view === ALL} onClick={() => setView(ALL)} />
+              <SidebarItem label={t.allSongs} count={allSongs.length} active={view === ALL} onClick={() => setView(ALL)} />
               <SidebarItem
-                label="Not in a collection"
+                label={t.unsorted}
                 count={collectionCounts.unsorted}
                 active={view === UNSORTED}
                 onClick={() => setView(UNSORTED)}
               />
               {duplicates.length > 0 && (
                 <SidebarItem
-                  label="Duplicates"
+                  label={t.duplicates}
                   count={duplicates.length}
                   active={view === DUPLICATES}
                   onClick={() => setView(DUPLICATES)}
                 />
               )}
-              <h3>Collections</h3>
+              <h3>{t.collections}</h3>
               {collections.map((c) => (
                 <SidebarItem
                   key={c.id}
@@ -349,7 +354,7 @@ export default function App() {
                 />
               ))}
               <button className="ghost new-collection" onClick={newCollection}>
-                + New collection{selected.size ? ` from ${selected.size} selected` : ''}
+                {t.newCollection(selected.size)}
               </button>
             </nav>
           </aside>
@@ -358,11 +363,11 @@ export default function App() {
             <div className="view-header">
               <h2>
                 {view === ALL
-                  ? 'All songs'
+                  ? t.allSongs
                   : view === UNSORTED
-                    ? 'Not in a collection'
+                    ? t.unsorted
                     : view === DUPLICATES
-                      ? 'Duplicates'
+                      ? t.duplicates
                       : activeCollection?.name}
               </h2>
               {activeCollection && (
@@ -370,27 +375,27 @@ export default function App() {
                   <button
                     className="ghost small"
                     onClick={() => {
-                      const name = prompt('Rename collection', activeCollection.name);
+                      const name = prompt(t.renameCollectionPrompt, activeCollection.name);
                       if (name) update((l) => renameCollection(l, activeCollection.id, name));
                     }}
                   >
-                    Rename
+                    {t.rename}
                   </button>
                   <button
                     className="ghost small danger"
                     onClick={() => {
-                      if (!confirm(`Delete collection "${activeCollection.name}"? The songs stay in the library.`)) return;
+                      if (!confirm(t.confirmDeleteCollection(activeCollection.name))) return;
                       update((l) => deleteCollection(l, activeCollection.id));
                       setView(ALL);
                     }}
                   >
-                    Delete collection
+                    {t.deleteCollection}
                   </button>
                 </>
               )}
               <div className="spacer" />
               <button className={showImport ? 'ghost' : 'primary'} onClick={() => setShowImport((v) => !v)}>
-                {showImport ? 'Hide import' : '+ Add songs'}
+                {showImport ? t.hideImport : t.addSongs}
               </button>
             </div>
 
@@ -427,44 +432,44 @@ export default function App() {
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search title, artist, album…"
+                    placeholder={t.searchLibrary}
                   />
                   {suspectCount > 0 && (
-                    <label className="inline" title="Songs whose Spotify year may be a remaster/compilation year">
-                      <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />⚠ Check
-                      year ({suspectCount})
+                    <label className="inline" title={t.checkYearTitle}>
+                      <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />
+                      {t.checkYear(suspectCount)}
                     </label>
                   )}
                   {suspectCount > 0 && (
                     <button
                       className="ghost small"
                       disabled={!connected || findingYears}
-                      title="Search Spotify for the earliest release of every ⚠ song in this view"
+                      title={t.findYearsTitle}
                       onClick={findAllYears}
                     >
-                      {findingYears ? 'Finding original years…' : '🔍 Find original years'}
+                      {findingYears ? t.findingYears : t.findYears}
                     </button>
                   )}
                   {foundYears.length > 0 && (
                     <button
                       className="ghost small"
-                      title="Use the earliest release year found for each ⚠ song"
+                      title={t.useFoundYearsTitle}
                       onClick={() => update((l) => foundYears.reduce((acc, f) => setYear(acc, f.id, f.year), l))}
                     >
-                      Use found years ({foundYears.length})
+                      {t.useFoundYears(foundYears.length)}
                     </button>
                   )}
                 </div>
 
                 {decadeCounts.length > 0 && (
-                  <div className="decades" title="Songs per decade — handy for a balanced timeline">
+                  <div className="decades" title={t.decadesTitle}>
                     {decadeCounts.map(([d, n]) => (
                       <button
                         key={d}
                         className={`decade${decade === d ? ' active' : ''}`}
                         onClick={() => setDecade(decade === d ? null : d)}
                       >
-                        <span>{String(d).slice(2)}s</span>
+                        <span>{t.decadeShort(d)}</span>
                         <b>{n}</b>
                       </button>
                     ))}
@@ -473,7 +478,7 @@ export default function App() {
 
                 {selected.size > 0 && (
                   <div className="selection-bar">
-                    <b>{selected.size} selected</b>
+                    <b>{t.selectedCount(selected.size)}</b>
                     <select
                       value=""
                       onChange={(e) => {
@@ -481,7 +486,7 @@ export default function App() {
                         if (id) update((l) => addToCollection(l, selected, id));
                       }}
                     >
-                      <option value="">Add to collection…</option>
+                      <option value="">{t.addToCollection}</option>
                       {collections.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -496,28 +501,28 @@ export default function App() {
                           setSelected(new Set());
                         }}
                       >
-                        Remove from "{activeCollection.name}"
+                        {t.removeFrom(activeCollection.name)}
                       </button>
                     )}
                     <button
                       className="ghost danger"
                       onClick={() => {
-                        if (!confirm(`Delete ${selected.size} songs from the library?`)) return;
+                        if (!confirm(t.confirmDeleteSongs(selected.size))) return;
                         update((l) => deleteSongs(l, selected));
                         setSelected(new Set());
                       }}
                     >
-                      Delete from library
+                      {t.deleteFromLibrary}
                     </button>
                     <div className="spacer" />
                     <button className="ghost" onClick={() => setSelected(new Set())}>
-                      Clear selection
+                      {t.clearSelection}
                     </button>
                   </div>
                 )}
 
                 <p className="muted count">
-                  Showing {shown.length} of {inView.length} songs
+                  {t.showing(shown.length, inView.length)}
                 </p>
                 <SongTable
                   songs={shown}
@@ -556,32 +561,33 @@ function Readiness(props: {
   decadeCounts: [number, number][];
   onShowSuspects: () => void;
 }) {
+  const t = useT();
   const { songs, suspectCount, decadeCounts } = props;
   const withYear = decadeCounts.reduce((sum, [, n]) => sum + n, 0);
   const [topDecade, topCount] = decadeCounts.reduce((top, d) => (d[1] > top[1] ? d : top), [0, 0]);
   const issues: ReactNode[] = [];
-  if (songs.length < MIN_SONGS) issues.push(`only ${songs.length} songs (aim for ${MIN_SONGS}+)`);
+  if (songs.length < MIN_SONGS) issues.push(t.readyFewSongs(songs.length, MIN_SONGS));
   if (suspectCount > 0) {
     issues.push(
       <button key="suspect" className="link" onClick={props.onShowSuspects}>
-        {suspectCount} years to check ⚠
+        {t.readyYearsToCheck(suspectCount)}
       </button>,
     );
   }
-  if (songs.length > withYear) issues.push(`${songs.length - withYear} songs without a year`);
-  if (decadeCounts.length < 3) issues.push(`only ${decadeCounts.length} decade${decadeCounts.length === 1 ? '' : 's'}`);
+  if (songs.length > withYear) issues.push(t.readyWithoutYear(songs.length - withYear));
+  if (decadeCounts.length < 3) issues.push(t.readyFewDecades(decadeCounts.length));
   else if (topCount / withYear > MAX_DECADE_SHARE) {
-    issues.push(`${Math.round((topCount / withYear) * 100)}% from the ${String(topDecade).slice(2)}s`);
+    issues.push(t.readyDecadeShare(Math.round((topCount / withYear) * 100), t.decade(topDecade)));
   }
   const span = decadeCounts.length
-    ? `${decadeCounts.length} decades, ${decadeCounts[0][0]}s–${decadeCounts[decadeCounts.length - 1][0]}s`
-    : 'no years';
+    ? t.readySpan(decadeCounts.length, t.decade(decadeCounts[0][0]), t.decade(decadeCounts[decadeCounts.length - 1][0]))
+    : t.readyNoYears;
 
   return (
     <div className={`readiness ${issues.length ? 'not-ready' : 'ready'}`}>
-      <b>{issues.length ? 'Not quite ready' : '✓ Ready to play'}</b>
+      <b>{issues.length ? t.readyNotQuite : t.readyOk}</b>
       <span className="muted">
-        {songs.length} songs · {span}
+        {t.readySongs(songs.length)} · {span}
       </span>
       {issues.map((issue, i) => (
         <span key={i} className="issue">
@@ -592,14 +598,15 @@ function Readiness(props: {
   );
 }
 
-const THEMES: { theme: Theme; icon: string; label: string }[] = [
-  { theme: 'auto', icon: '◐', label: 'Auto (follows Windows)' },
-  { theme: 'light', icon: '☀', label: 'Light' },
-  { theme: 'dark', icon: '☾', label: 'Dark' },
+const THEMES: { theme: Theme; icon: string }[] = [
+  { theme: 'auto', icon: '◐' },
+  { theme: 'light', icon: '☀' },
+  { theme: 'dark', icon: '☾' },
 ];
 
 /** Cycles auto → light → dark. */
 function ThemeToggle() {
+  const t = useT();
   const theme = useTheme();
   const i = THEMES.findIndex((t) => t.theme === theme);
   const next = THEMES[(i + 1) % THEMES.length];
@@ -607,11 +614,30 @@ function ThemeToggle() {
     <button
       className="ghost icon"
       onClick={() => setTheme(next.theme)}
-      title={`Theme: ${THEMES[i].label}. Click for ${next.label.toLowerCase()}.`}
-      aria-label={`Theme: ${THEMES[i].label}`}
+      title={t.themeTitle(t.themeNames[theme], t.themeNames[next.theme])}
+      aria-label={t.themeAria(t.themeNames[theme])}
     >
       {THEMES[i].icon}
     </button>
+  );
+}
+
+const LANGS: { lang: Lang; label: string }[] = [
+  { lang: 'en', label: 'EN' },
+  { lang: 'da', label: 'DA' },
+];
+
+function LangToggle() {
+  const t = useT();
+  const lang = useLang();
+  return (
+    <div className="lang-toggle" role="group" aria-label={t.languageTitle} title={t.languageTitle}>
+      {LANGS.map((l) => (
+        <button key={l.lang} className={lang === l.lang ? 'active' : undefined} onClick={() => setLang(l.lang)}>
+          {l.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

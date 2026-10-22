@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { isYearSuspect, songYear } from '../library';
 import type { Collection, Song } from '../types';
+import { locale, useT } from '../i18n';
 import { earlierRelease, type YearLookup } from '../versions';
 import { PlayButton } from './PlayerBar';
 
@@ -46,6 +47,7 @@ export function SongTable({
   onToggleAll,
   yearActions,
 }: Props) {
+  const t = useT();
   const header = (key: SortKey, label: string) => <SortHeader sortKey={key} label={label} sort={sort} onSort={onSort} />;
   // Render rows in pages as the user scrolls; mounting thousands of rows at once is what makes filtering slow.
   const [limit, setLimit] = useState(PAGE);
@@ -63,7 +65,7 @@ export function SongTable({
     return () => observer.disconnect();
   }, [limit, songs.length]);
 
-  if (!songs.length) return <p className="empty">No songs here yet.</p>;
+  if (!songs.length) return <p className="empty">{t.noSongs}</p>;
   const allSelected = songs.every((s) => selected.has(s.id));
 
   return (
@@ -82,16 +84,16 @@ export function SongTable({
         <thead>
           <tr>
             <th className="check">
-              <input type="checkbox" checked={allSelected} onChange={onToggleAll} title="Select all shown" />
+              <input type="checkbox" checked={allSelected} onChange={onToggleAll} title={t.selectAllShown} />
             </th>
             <th />
             <th>
-              {header('title', 'Title')} <span className="muted">/</span> {header('artist', 'Artist')}
+              {header('title', t.colTitle)} <span className="muted">/</span> {header('artist', t.colArtist)}
             </th>
-            <th>{header('album', 'Album')}</th>
-            <th className="year">{header('year', 'Year')}</th>
-            <th>Collections</th>
-            <th className="added">{header('added', 'Added')}</th>
+            <th>{header('album', t.colAlbum)}</th>
+            <th className="year">{header('year', t.colYear)}</th>
+            <th>{t.colCollections}</th>
+            <th className="added">{header('added', t.colAdded)}</th>
             <th />
           </tr>
         </thead>
@@ -109,7 +111,7 @@ export function SongTable({
           ))}
         </tbody>
       </table>
-      {songs.length > limit && <div ref={sentinel} className="muted count">Loading more…</div>}
+      {songs.length > limit && <div ref={sentinel} className="muted count">{t.loadingMore}</div>}
     </>
   );
 }
@@ -133,7 +135,7 @@ function SortHeader(props: { sortKey: SortKey; label: string; sort: Sort; onSort
 
 const sameYear = (t: number) => new Date(t).getFullYear() === new Date().getFullYear();
 const formatAdded = (t: number) =>
-  new Date(t).toLocaleDateString(undefined, sameYear(t) ? { day: 'numeric', month: 'short' } : { dateStyle: 'medium' });
+  new Date(t).toLocaleDateString(locale(), sameYear(t) ? { day: 'numeric', month: 'short' } : { dateStyle: 'medium' });
 
 interface RowProps {
   song: Song;
@@ -153,6 +155,7 @@ const SongRow = memo(function SongRow({
   onToggle,
   yearActions,
 }: RowProps) {
+  const t = useT();
   return (
     <tr className={isSelected ? 'selected' : undefined}>
       <td className="check">
@@ -183,7 +186,7 @@ const SongRow = memo(function SongRow({
             </span>
           ))}
       </td>
-      <td className="added muted" title={new Date(s.addedAt).toLocaleString()}>
+      <td className="added muted" title={new Date(s.addedAt).toLocaleString(locale())}>
         {formatAdded(s.addedAt)}
       </td>
       <td className="actions">
@@ -193,7 +196,7 @@ const SongRow = memo(function SongRow({
           href={`https://open.spotify.com/track/${s.id}`}
           target="_blank"
           rel="noreferrer"
-          title="Open in Spotify"
+          title={t.openInSpotify}
         >
           ↗
         </a>
@@ -203,6 +206,7 @@ const SongRow = memo(function SongRow({
 });
 
 function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
+  const t = useT();
   const year = songYear(song);
   const [draft, setDraft] = useState(year?.toString() ?? '');
   useEffect(() => setDraft(year?.toString() ?? ''), [year]);
@@ -217,10 +221,10 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
   const suspect = isYearSuspect(song);
   const overridden = song.yearOverride != null;
   const title = overridden
-    ? `Corrected by you (Spotify says ${song.spotifyYear ?? '?'}). Clear to reset.`
+    ? t.yearCorrectedTitle(String(song.spotifyYear ?? '?'))
     : suspect
-      ? `From "${song.album}" — this may be a remaster/compilation year. Check the original release year.`
-      : `Release date on Spotify: ${song.releaseDate}`;
+      ? t.yearSuspectTitle(song.album)
+      : t.yearReleaseTitle(song.releaseDate);
 
   return (
     <span className={`year-cell${suspect ? ' suspect' : ''}${overridden ? ' overridden' : ''}`} title={title}>
@@ -239,35 +243,36 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
 }
 
 function YearSuggestion({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
+  const t = useT();
   const earlier = earlierRelease(song, lookup);
   return (
     <>
       {!lookup && (
-        <button className="mini" title="Find the original release year on Spotify" onClick={() => actions.find(song.id)}>
+        <button className="mini" title={t.findYearTitle} onClick={() => actions.find(song.id)}>
           🔍
         </button>
       )}
       {lookup?.state === 'loading' && <span className="muted">…</span>}
       {lookup?.state === 'error' && (
-        <button className="mini danger" title={`${lookup.message}. Click to retry.`} onClick={() => actions.find(song.id)}>
+        <button className="mini danger" title={t.retryTitle(lookup.message)} onClick={() => actions.find(song.id)}>
           !
         </button>
       )}
       {earlier && (
         <button
           className="mini suggestion"
-          title={`Earliest release found: "${earlier.album}" (${earlier.year}). Click to use this year.`}
+          title={t.earliestFoundTitle(earlier.album, earlier.year)}
           onClick={() => actions.set(song.id, earlier.year)}
         >
           → {earlier.year}
         </button>
       )}
       {lookup?.state === 'done' && !earlier && (
-        <span className="muted" title="Spotify has no earlier release of this song">
-          none
+        <span className="muted" title={t.noEarlierTitle}>
+          {t.noEarlier}
         </span>
       )}
-      <button className="mini" title="Spotify's year is right — stop flagging it" onClick={() => actions.confirm(song.id)}>
+      <button className="mini" title={t.confirmYearTitle} onClick={() => actions.confirm(song.id)}>
         ✓
       </button>
     </>

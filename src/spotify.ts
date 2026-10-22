@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { SongData } from './types';
 
 const AUTH_URL = 'https://accounts.spotify.com';
@@ -82,7 +83,7 @@ function base64url(bytes: Uint8Array) {
 /** Starts the Authorization Code + PKCE flow (no client secret needed). */
 export async function login() {
   const clientId = getClientId();
-  if (!clientId) throw new Error('Set your Spotify Client ID in settings first.');
+  if (!clientId) throw new Error(t().setClientIdFirst);
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(64)));
   const challenge = base64url(
     new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))),
@@ -106,10 +107,10 @@ export async function handleAuthCallback(): Promise<void> {
   const error = url.searchParams.get('error');
   if (!code && !error) return;
   window.history.replaceState({}, '', url.pathname);
-  if (error) throw new Error(`Spotify login failed: ${error}`);
+  if (error) throw new Error(t().loginFailed(error));
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
   sessionStorage.removeItem(VERIFIER_KEY);
-  if (!verifier) throw new Error('Login state was lost — please try connecting again.');
+  if (!verifier) throw new Error(t().loginStateLost);
   const json = await tokenRequest({
     grant_type: 'authorization_code',
     code: code!,
@@ -135,7 +136,7 @@ let refreshing: Promise<string> | null = null;
 
 async function accessToken(forceRefresh = false): Promise<string> {
   const token = readToken();
-  if (!token) throw new Error('Not connected to Spotify.');
+  if (!token) throw new Error(t().notConnected);
   if (!forceRefresh && Date.now() < token.expiresAt - 60_000) return token.accessToken;
   // Share one refresh between concurrent requests; refresh tokens may rotate.
   refreshing ??= tokenRequest({
@@ -149,7 +150,7 @@ async function accessToken(forceRefresh = false): Promise<string> {
     })
     .catch(() => {
       logout();
-      throw new Error('Spotify session expired — please connect again.');
+      throw new Error(t().sessionExpired);
     })
     .finally(() => (refreshing = null));
   return refreshing;

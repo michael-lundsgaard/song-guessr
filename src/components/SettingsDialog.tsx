@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../i18n';
 import { getClientId, redirectUri, setClientId } from '../spotify';
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const [clientId, setValue] = useState(getClientId);
 
@@ -26,33 +28,31 @@ export function SettingsDialog({ open, onClose }: Props) {
           onClose();
         }}
       >
-        <h2>Spotify setup</h2>
+        <h2>{t.setupTitle}</h2>
         <ol className="steps">
           <li>
-            Create an app at{' '}
+            {t.setupStep1}{' '}
             <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">
               developer.spotify.com/dashboard
             </a>{' '}
-            (tick <em>Web API</em> and <em>Web Playback SDK</em>).
+            {t.setupStep1After}
           </li>
           <li>
-            Add this Redirect URI: <code className="copyable">{redirectUri()}</code>
+            {t.setupStep2} <code className="copyable">{redirectUri()}</code>
           </li>
-          <li>
-            Under <em>User Management</em>, add your own Spotify account (the email you log in with).
-          </li>
-          <li>Paste the app's Client ID below.</li>
+          <li>{t.setupStep3}</li>
+          <li>{t.setupStep4}</li>
         </ol>
         <label className="field">
-          Client ID
-          <input value={clientId} onChange={(e) => setValue(e.target.value)} placeholder="e.g. 1a2b3c…" autoFocus />
+          {t.clientId}
+          <input value={clientId} onChange={(e) => setValue(e.target.value)} placeholder={t.clientIdPlaceholder} autoFocus />
         </label>
         <div className="dialog-actions">
           <button type="button" className="ghost" onClick={onClose}>
-            Cancel
+            {t.cancel}
           </button>
           <button type="submit" className="primary">
-            Save
+            {t.save}
           </button>
         </div>
       </form>

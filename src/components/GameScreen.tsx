@@ -4,6 +4,7 @@ import { isYearSuspect, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
 import { PlayerBar } from './PlayerBar';
+import { useT } from '../i18n';
 
 interface Props {
   lib: Library;
@@ -13,17 +14,11 @@ interface Props {
   onNewGame: () => void;
 }
 
-/** Award button labels: [Guess the song, Timeline extra points]. */
-const AWARD_LABELS = {
-  title: ['Title', 'Title'],
-  artist: ['Artist', 'Artist'],
-  year: ['Year', 'Exact year'],
-} as const;
-
 /** A ⚠ year may be a later remaster/compilation year: show it as approximate. */
 const yearLabel = (s: Song) => `${isYearSuspect(s) ? '≈ ' : ''}${songYear(s) ?? '?'}`;
 
 export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props) {
+  const t = useT();
   const player = usePlayer();
   const round = game.round;
   const song = round ? lib.songs[round.songId] : null;
@@ -55,7 +50,7 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
   }
 
   function finish() {
-    if (!confirm('End the game now? The current scores decide the winner.')) return;
+    if (!confirm(t.confirmEndGame)) return;
     void pause();
     onChange(endGame(game));
   }
@@ -90,18 +85,18 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
       <div className="game">
         <div className="winner">
           <div className="trophy">🏆</div>
-          <h2>{game.winner >= 0 ? `${game.teams[game.winner].name} wins!` : "It's a draw!"}</h2>
+          <h2>{game.winner >= 0 ? t.wins(game.teams[game.winner].name) : t.draw}</h2>
           <ol className="final-scores">
-            {ranked.map((t) => (
-              <li key={t.name}>
-                {t.name} <b>{t.score}</b>
-                {game.setup.extraPoints && <span className="muted"> (+{t.bonus ?? 0} extra)</span>}
+            {ranked.map((team) => (
+              <li key={team.name}>
+                {team.name} <b>{team.score}</b>
+                {game.setup.extraPoints && <span className="muted">{t.extraSuffix(team.bonus ?? 0)}</span>}
               </li>
             ))}
           </ol>
-          <p className="muted">{game.roundsPlayed} songs played</p>
+          <p className="muted">{t.songsPlayed(game.roundsPlayed)}</p>
           <button className="primary big" onClick={onNewGame}>
-            New game
+            {t.newGame}
           </button>
         </div>
       </div>
@@ -110,38 +105,38 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
 
   const mainAction = !round ? null : round.revealed ? (
     <button className="primary big" onClick={next}>
-      Next song →
+      {t.nextSong}
     </button>
   ) : isTimeline ? (
     <button className="primary big" disabled={pendingSlot == null} onClick={confirmPlacement}>
-      {pendingSlot == null ? 'Pick a spot on the timeline' : 'Confirm placement (Enter)'}
+      {pendingSlot == null ? t.pickSpot : t.confirmPlacement}
     </button>
   ) : (
     <button className="primary big" onClick={() => onChange(reveal(game))}>
-      Reveal (Enter)
+      {t.reveal}
     </button>
   );
 
   return (
     <div className={`game mode-${game.setup.mode}`}>
       <div className="scoreboard">
-        {game.teams.map((t, i) => (
+        {game.teams.map((team, i) => (
           <div key={i} className={`team-score${i === game.turn ? ' current' : ''}`}>
-            <span>{t.name}</span>
-            <b>{t.score}</b>
+            <span>{team.name}</span>
+            <b>{team.score}</b>
             {isTimeline && game.setup.extraPoints && (
-              <span className="muted small-note" title="Extra points only decide a tie">
-                +{t.bonus ?? 0}
+              <span className="muted small-note" title={t.extraOnlyTie}>
+                +{team.bonus ?? 0}
               </span>
             )}
           </div>
         ))}
         <div className="spacer" />
         <span className="muted">
-          Song {game.roundsPlayed + 1} · {game.deck.length} left · first to {game.setup.target}
+          {t.progress(game.roundsPlayed + 1, game.deck.length, game.setup.target)}
         </span>
         <button className="ghost small" onClick={finish}>
-          End game
+          {t.endGame}
         </button>
       </div>
 
@@ -163,30 +158,29 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
 
           <div className="stage-info">
             <p className="turn">
-              <b>{team.name}</b>'s turn
+              <b>{t.turn(team.name)}</b>
             </p>
             {!round.revealed && (
               <p className="muted hint">
-                {isTimeline
-                  ? 'Where does this song go on your timeline? Pick a spot below, then confirm.'
-                  : 'Name the title, the artist and the year, then reveal the card.'}
+                {isTimeline ? t.hintTimeline : t.hintGuess}
               </p>
             )}
             {isTimeline && round.revealed && (
               <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
-                {round.correct ? '✓ Correct! The card stays.' : `✗ Wrong. It was ${yearLabel(song)}.`}
+                {round.correct ? t.correct : t.wrong(yearLabel(song))}
               </p>
             )}
             {round.awarded && (
               <div className="awards">
-                {isTimeline && <span className="muted">Extra points (tiebreaker):</span>}
+                {isTimeline && <span className="muted">{t.extraPointsLabel}</span>}
                 {(['title', 'artist', 'year'] as const).map((field) => (
                   <button
                     key={field}
                     className={`award${round.awarded![field] ? ' on' : ''}`}
                     onClick={() => onChange(toggleAward(game, field))}
                   >
-                    {round.awarded![field] ? '✓' : '+1'} {AWARD_LABELS[field][isTimeline ? 1 : 0]}
+                    {round.awarded![field] ? '✓' : '+1'}{' '}
+                    {field === 'title' ? t.awardTitle : field === 'artist' ? t.awardArtist : isTimeline ? t.awardExactYear : t.awardYear}
                   </button>
                 ))}
               </div>
@@ -212,13 +206,13 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
         actions={
           song && (
             <>
-              <button className="mini big-icon" disabled={!isPlayingRound} onClick={() => replay()} title="Replay (R)">
+              <button className="mini big-icon" disabled={!isPlayingRound} onClick={() => replay()} title={t.replayKey}>
                 ⟲
               </button>
               <button
                 className="mini big-icon play"
                 onClick={() => (isPlayingRound ? togglePlay() : playSong(song))}
-                title="Play / pause (space)"
+                title={t.playPauseKey}
               >
                 {isPlayingRound && player.playing ? '❚❚' : '▶'}
               </button>
@@ -232,10 +226,11 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
 }
 
 function RevealedCard({ song }: { song: Song }) {
+  const t = useT();
   return (
     <div className="card revealed-card">
       {song.imageUrl && <img src={song.imageUrl} alt="" />}
-      <div className="card-year" title={isYearSuspect(song) ? "Spotify's year; the original may be earlier" : undefined}>
+      <div className="card-year" title={isYearSuspect(song) ? t.approxYearTitle : undefined}>
         {yearLabel(song)}
       </div>
       <div className="card-title">{song.title}</div>
@@ -253,13 +248,14 @@ function Timeline(props: {
   highlight?: string;
   onSelect: (index: number) => void;
 }) {
+  const t = useT();
   const slot = (index: number) =>
     props.placing && (
       <button
         key={`slot-${index}`}
         className={`slot${props.selected === index ? ' selected' : ''}`}
         onClick={() => props.onSelect(index)}
-        title="Place the song here"
+        title={t.placeHere}
       >
         {props.selected === index ? '?' : '+'}
       </button>

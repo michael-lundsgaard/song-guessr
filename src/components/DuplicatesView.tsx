@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { duplicateGroupKey, songYear } from '../library';
+import { useT } from '../i18n';
 import type { Collection, Song } from '../types';
 
 interface Props {
@@ -11,21 +12,19 @@ interface Props {
 
 /** Versions of the same song (e.g. original and remaster), with a merge into the one to keep. */
 export function DuplicatesView({ groups, collections, onMerge, onIgnore }: Props) {
-  if (!groups.length) return <p className="empty">No duplicates found.</p>;
+  const t = useT();
+  if (!groups.length) return <p className="empty">{t.noDuplicates}</p>;
   return (
     <>
       <div className="toolbar">
-        <p className="muted count">
-          {groups.length} songs are in the library more than once. Merging keeps the chosen version, adds it to
-          every collection of the others, and keeps the earliest year.
-        </p>
+        <p className="muted count">{t.duplicatesIntro(groups.length)}</p>
         <div className="spacer" />
         <button
           className="ghost"
-          title="Keep the preselected version of every song"
+          title={t.mergeAllTitle}
           onClick={() => groups.forEach((g) => onMerge(g[0].id, g))}
         >
-          Merge all ({groups.length})
+          {t.mergeAll(groups.length)}
         </button>
       </div>
       {groups.map((group) => (
@@ -52,6 +51,7 @@ function DuplicateGroup({
   onMerge: Props['onMerge'];
   onIgnore: Props['onIgnore'];
 }) {
+  const t = useT();
   // Groups are sorted best version first: unflagged year, then earliest.
   const [keepId, setKeepId] = useState(group[0].id);
   return (
@@ -86,7 +86,7 @@ function DuplicateGroup({
                   href={`https://open.spotify.com/track/${s.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  title="Open in Spotify"
+                  title={t.openInSpotify}
                   onClick={(e) => e.stopPropagation()}
                 >
                   ↗
@@ -98,10 +98,10 @@ function DuplicateGroup({
       </table>
       <div className="import-controls">
         <button className="primary" onClick={() => onMerge(keepId, group)}>
-          Keep selected, merge {group.length - 1} other{group.length > 2 ? 's' : ''}
+          {t.keepAndMerge(group.length - 1)}
         </button>
-        <button className="ghost" title="These are different songs — stop listing them" onClick={() => onIgnore(group)}>
-          Not duplicates
+        <button className="ghost" title={t.notDuplicatesTitle} onClick={() => onIgnore(group)}>
+          {t.notDuplicates}
         </button>
       </div>
     </div>
