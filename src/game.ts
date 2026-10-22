@@ -29,9 +29,10 @@ export interface Team {
 export interface Round {
   songId: string;
   revealed: boolean;
-  /** Timeline: where the team placed the card, and whether that was right. */
+  /** Timeline: where the team placed the card, whether that was right, and where it belongs. */
   placedAt?: number;
   correct?: boolean;
+  rightAt?: number;
   /** Guess: which parts the team got right (each is a point). */
   awarded?: { title: boolean; artist: boolean; year: boolean };
   /** Closest year: each team's guess (by team index), and the points each team got. */
@@ -191,14 +192,17 @@ export function place(game: Game, lib: Library, index: number): Game {
     const next = i < team.timeline.length ? yearAt(i) : null;
     return (prev == null || prev <= year) && (next == null || year <= next);
   };
+  // Where the card belongs: the picked spot if it fits, else the first spot that does.
+  const rightAt = fits(index) ? index : [...Array(team.timeline.length + 1).keys()].find(fits)!;
   const correct = fits(index) || (isYearSuspect(song) && index < team.timeline.length && fits(index + 1));
   const teams = game.teams.map((t, i) => {
     if (i !== game.turn || !correct) return t;
-    const timeline = [...t.timeline.slice(0, index), round.songId, ...t.timeline.slice(index)];
+    // A card accepted one spot early still goes where it belongs, so the timeline stays in order.
+    const timeline = [...t.timeline.slice(0, rightAt), round.songId, ...t.timeline.slice(rightAt)];
     return { ...t, timeline, score: t.score + 1 };
   });
   const awarded = game.setup.extraPoints ? { title: false, artist: false, year: false } : undefined;
-  return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct, awarded } };
+  return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct, rightAt, awarded } };
 }
 
 /** Closest year: records one team's guess (null clears it). */

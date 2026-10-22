@@ -1046,6 +1046,28 @@ input.narrow {
   font-size: 12px;
 }
 
+.mini-card.misplaced {
+  border: 2px solid var(--danger);
+  opacity: 0.85;
+}
+
+.belongs-here {
+  flex: none;
+  width: 72px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  padding: 4px;
+}
+
 .mini-card .clip {
   max-width: 100%;
 }
@@ -1398,4 +1420,14 @@ button.mini.big-icon {
   .trophy {
     animation: none;
   }
+}
+
+/* The main game button keeps one width whatever its text, so nothing next to it moves between clicks. */
+.player-bar > button.primary.big {
+  flex: none;
+  width: 340px;
+  margin-left: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

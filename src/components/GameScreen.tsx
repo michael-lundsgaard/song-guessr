@@ -293,6 +293,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
           placing={!round.revealed}
           selected={typeof pending === 'number' ? pending : null}
           highlight={round.revealed && round.correct ? round.songId : undefined}
+          miss={round.revealed && !round.correct && song ? { song, placedAt: round.placedAt!, rightAt: round.rightAt! } : undefined}
           onSelect={setPending}
         />
       )}
@@ -428,20 +429,42 @@ function Timeline(props: {
   /** The slot picked but not yet confirmed. */
   selected: number | null;
   highlight?: string;
+  /** A wrong placement: the card where the team put it, and a marker where it belongs. */
+  miss?: { song: Song; placedAt: number; rightAt: number };
   onSelect: (index: number) => void;
 }) {
   const t = useT();
-  const slot = (index: number) =>
-    props.placing && (
-      <button
-        key={`slot-${index}`}
-        className={`slot${props.selected === index ? ' selected' : ''}`}
-        onClick={() => props.onSelect(index)}
-        title={t.placeHere}
-      >
-        {props.selected === index ? '?' : '+'}
-      </button>
+  const { miss } = props;
+  const slot = (index: number) => {
+    if (miss) {
+      return [
+        index === miss.placedAt && (
+          <div key="miss" className="mini-card misplaced" title={t.yourPlacement}>
+            <b>{yearLabel(miss.song)}</b>
+            <span className="clip">{miss.song.title}</span>
+            <span className="muted clip">{miss.song.artists[0]}</span>
+          </div>
+        ),
+        index === miss.rightAt && (
+          <div key="right" className="belongs-here">
+            {t.belongsHere}
+          </div>
+        ),
+      ];
+    }
+    return (
+      props.placing && (
+        <button
+          key={`slot-${index}`}
+          className={`slot${props.selected === index ? ' selected' : ''}`}
+          onClick={() => props.onSelect(index)}
+          title={t.placeHere}
+        >
+          {props.selected === index ? '?' : '+'}
+        </button>
+      )
     );
+  };
   return (
     <div className="timeline">
       {props.ids.map((id, i) => {

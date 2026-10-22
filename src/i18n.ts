@@ -294,6 +294,8 @@ const en = {
   replayKey: 'Replay (R)',
   playPauseKey: 'Play / pause (space)',
   placeHere: 'Place the song here',
+  yourPlacement: 'Where you placed it',
+  belongsHere: 'It goes here',
   approxYearTitle: "Spotify's year; the original may be earlier",
 
   // Rules
@@ -612,6 +614,8 @@ const da: Messages = {
   replayKey: 'Afspil igen (R)',
   playPauseKey: 'Afspil / pause (mellemrum)',
   placeHere: 'Placér sangen her',
+  yourPlacement: 'Hvor I placerede den',
+  belongsHere: 'Den hører til her',
   approxYearTitle: 'Spotifys år; originalen kan være ældre',
 
   rulesButton: 'Regler',
