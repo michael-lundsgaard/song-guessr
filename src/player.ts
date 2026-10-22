@@ -189,6 +189,35 @@ export function selectTarget(target: string) {
   set({ target, error: '' });
 }
 
+/**
+ * The browser player's device, waiting for the player to finish starting (it registers with Spotify a
+ * few seconds after the page loads, and a game may start before that).
+ */
+function readyDeviceId(timeoutMs = 10_000): Promise<string> {
+  if (state.target !== BROWSER || (state.sdk === 'ready' && browserDeviceId)) return Promise.resolve(targetDeviceId());
+  initBrowserPlayer();
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      clearTimeout(timer);
+      listeners.delete(check);
+    };
+    const check = () => {
+      if (state.sdk === 'ready' && browserDeviceId) {
+        done();
+        resolve(browserDeviceId);
+      } else if (state.sdk === 'error') {
+        done();
+        reject(new Error(state.sdkError));
+      }
+    };
+    const timer = setTimeout(() => {
+      done();
+      reject(new Error(t().browserPlayerStarting));
+    }, timeoutMs);
+    listeners.add(check);
+  });
+}
+
 function targetDeviceId(): string {
   if (state.target !== BROWSER) return state.target;
   if (!browserDeviceId || state.sdk !== 'ready') {
@@ -214,7 +243,7 @@ export async function play(song: { uri: string; durationMs: number }, options: {
   const current = { uri: song.uri, durationMs: song.durationMs, startMs };
   set({ current, playing: true, positionMs: startMs, positionAt: Date.now(), error: '' });
   await run(async () => {
-    const deviceId = targetDeviceId();
+    const deviceId = await readyDeviceId();
     try {
       await playOnDevice(deviceId, song.uri, startMs);
     } catch (e) {

@@ -26,6 +26,7 @@ import {
   songYear,
   upsertSongs,
 } from './library';
+import { initBrowserPlayer } from './player';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
 import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
@@ -74,6 +75,11 @@ export default function App() {
       })
       .catch((e) => setLoadError(e.message));
   }, []);
+
+  // Start the browser player as soon as Spotify is connected, so it is ready when a game starts.
+  useEffect(() => {
+    if (connected) initBrowserPlayer();
+  }, [connected]);
 
   // Persist to data/library.json, debounced. Skip the initial load.
   const loaded = useRef<Library | null>(null);
