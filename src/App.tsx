@@ -272,7 +272,10 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <span className={`save ${saveState}`}>
+        <span
+          className={`save ${saveState}`}
+          title="Library changes are saved automatically to data/library.json in the project folder"
+        >
           {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Save failed!' : 'Saved'}
         </span>
         <div className="spacer" />
