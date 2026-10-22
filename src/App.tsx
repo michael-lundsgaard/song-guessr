@@ -27,6 +27,7 @@ import {
   upsertSongs,
 } from './library';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
+import { setTheme, useTheme, type Theme } from './theme';
 import type { Library, Song } from './types';
 import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
 
@@ -312,6 +313,7 @@ export default function App() {
             Set up Spotify
           </button>
         )}
+        <ThemeToggle />
         <button className="ghost icon" onClick={() => setSettingsOpen(true)} title="Spotify settings">
           ⚙
         </button>
@@ -587,6 +589,29 @@ function Readiness(props: {
         </span>
       ))}
     </div>
+  );
+}
+
+const THEMES: { theme: Theme; icon: string; label: string }[] = [
+  { theme: 'auto', icon: '◐', label: 'Auto (follows Windows)' },
+  { theme: 'light', icon: '☀', label: 'Light' },
+  { theme: 'dark', icon: '☾', label: 'Dark' },
+];
+
+/** Cycles auto → light → dark. */
+function ThemeToggle() {
+  const theme = useTheme();
+  const i = THEMES.findIndex((t) => t.theme === theme);
+  const next = THEMES[(i + 1) % THEMES.length];
+  return (
+    <button
+      className="ghost icon"
+      onClick={() => setTheme(next.theme)}
+      title={`Theme: ${THEMES[i].label}. Click for ${next.label.toLowerCase()}.`}
+      aria-label={`Theme: ${THEMES[i].label}`}
+    >
+      {THEMES[i].icon}
+    </button>
   );
 }
 
