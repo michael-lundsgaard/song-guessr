@@ -453,6 +453,25 @@ button.link {
   cursor: pointer;
 }
 
+.songs th button.sort {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.songs th button.sort:hover,
+.songs th button.sort.active {
+  color: var(--text);
+}
+
+.songs .added {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
 .songs .actions {
   white-space: nowrap;
   text-align: right;
@@ -563,4 +582,54 @@ button.mini.play {
   max-width: 560px;
   margin: 15vh auto;
   text-align: center;
+}
+
+/* Library table: fixed column widths so sorting and filtering don't reflow it. */
+
+.songs.fixed {
+  table-layout: fixed;
+}
+
+.songs.fixed .w-check {
+  width: 36px;
+}
+
+.songs.fixed .w-cover {
+  width: 56px;
+}
+
+.songs.fixed .w-album {
+  width: 22%;
+}
+
+.songs.fixed .w-year {
+  width: 190px;
+}
+
+.songs.fixed .w-collections {
+  width: 16%;
+}
+
+.songs.fixed .w-added {
+  width: 84px;
+}
+
+.songs.fixed .w-actions {
+  width: 76px;
+}
+
+.songs.fixed td {
+  overflow: hidden;
+}
+
+.songs.fixed .title,
+.songs.fixed .clip,
+.songs.fixed .album {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.songs.fixed .album {
+  max-width: none;
 }

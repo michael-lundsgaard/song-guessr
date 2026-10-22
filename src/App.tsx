@@ -3,7 +3,7 @@ import { ImportPanel, type ImportTarget } from './components/ImportPanel';
 import { DuplicatesView } from './components/DuplicatesView';
 import { PlayerBar } from './components/PlayerBar';
 import { SettingsDialog } from './components/SettingsDialog';
-import { SongTable, type YearActions } from './components/SongTable';
+import { SongTable, type Sort, type SortKey, type YearActions } from './components/SongTable';
 import { pool, type ImportResult } from './importer';
 import {
   addToCollection,
@@ -29,7 +29,6 @@ import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconn
 import type { Library, Song } from './types';
 import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
 
-type Sort = 'added' | 'year' | 'title' | 'artist';
 type SaveState = 'saved' | 'saving' | 'error';
 
 const ALL = '__all__';
@@ -49,7 +48,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [decade, setDecade] = useState<number | null>(null);
   const [suspectOnly, setSuspectOnly] = useState(false);
-  const [sort, setSort] = useState<Sort>('added');
+  const [sort, setSort] = useState<Sort>({ key: 'added', dir: 'desc' });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -156,13 +155,17 @@ export default function App() {
         (decade == null || decadeOf(songYear(s)) === decade) &&
         (!suspectOnly || isYearSuspect(s)),
     );
-    const cmp: Record<Sort, (a: Song, b: Song) => number> = {
-      added: (a, b) => b.addedAt - a.addedAt,
+    const cmp: Record<SortKey, (a: Song, b: Song) => number> = {
+      added: (a, b) => a.addedAt - b.addedAt,
       year: (a, b) => (songYear(a) ?? 0) - (songYear(b) ?? 0),
       title: (a, b) => a.title.localeCompare(b.title),
       artist: (a, b) => a.artists[0].localeCompare(b.artists[0]),
+      album: (a, b) => a.album.localeCompare(b.album),
     };
-    return filtered.sort(cmp[sort]);
+    const sign = sort.dir === 'asc' ? 1 : -1;
+    // Songs without a year go last in both directions.
+    const noYear = (s: Song) => (sort.key === 'year' && songYear(s) == null ? 1 : 0);
+    return filtered.sort((a, b) => noYear(a) - noYear(b) || sign * cmp[sort.key](a, b));
   }, [inView, query, decade, suspectOnly, sort]);
 
   const suspects = useMemo(() => inView.filter(isYearSuspect), [inView]);
@@ -405,12 +408,6 @@ export default function App() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search title, artist, album…"
               />
-              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-                <option value="added">Recently added</option>
-                <option value="year">Year</option>
-                <option value="title">Title</option>
-                <option value="artist">Artist</option>
-              </select>
               {suspectCount > 0 && (
                 <label className="inline" title="Songs whose Spotify year may be a remaster/compilation year">
                   <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />⚠ Check
@@ -505,7 +502,9 @@ export default function App() {
               songs={shown}
               collections={lib.collections}
               selected={selected}
-              resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort}`}
+              resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort.key}|${sort.dir}`}
+              sort={sort}
+              onSort={setSort}
               yearLookups={yearLookups}
               onToggle={toggle}
               onToggleAll={toggleAll}

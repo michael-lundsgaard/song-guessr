@@ -4,6 +4,12 @@ import type { Collection, Song } from '../types';
 import { earlierRelease, type YearLookup } from '../versions';
 import { PlayButton } from './PlayerBar';
 
+export type SortKey = 'added' | 'year' | 'title' | 'artist' | 'album';
+export interface Sort {
+  key: SortKey;
+  dir: 'asc' | 'desc';
+}
+
 export interface YearActions {
   set: (id: string, year: number | null) => void;
   /** Looks up the song's original release year on Spotify. */
@@ -19,6 +25,8 @@ interface Props {
   yearLookups: Record<string, YearLookup>;
   /** Changes whenever the filters/sort change, so the table scrolls back to its first page. */
   resetKey: string;
+  sort: Sort;
+  onSort: (sort: Sort) => void;
   onToggle: (id: string) => void;
   onToggleAll: () => void;
   yearActions: YearActions;
@@ -32,10 +40,13 @@ export function SongTable({
   selected,
   yearLookups,
   resetKey,
+  sort,
+  onSort,
   onToggle,
   onToggleAll,
   yearActions,
 }: Props) {
+  const header = (key: SortKey, label: string) => <SortHeader sortKey={key} label={label} sort={sort} onSort={onSort} />;
   // Render rows in pages as the user scrolls; mounting thousands of rows at once is what makes filtering slow.
   const [limit, setLimit] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -57,17 +68,30 @@ export function SongTable({
 
   return (
     <>
-      <table className="songs">
+      <table className="songs fixed">
+        <colgroup>
+          <col className="w-check" />
+          <col className="w-cover" />
+          <col />
+          <col className="w-album" />
+          <col className="w-year" />
+          <col className="w-collections" />
+          <col className="w-added" />
+          <col className="w-actions" />
+        </colgroup>
         <thead>
           <tr>
             <th className="check">
               <input type="checkbox" checked={allSelected} onChange={onToggleAll} title="Select all shown" />
             </th>
             <th />
-            <th>Song</th>
-            <th>Album</th>
-            <th className="year">Year</th>
+            <th>
+              {header('title', 'Title')} <span className="muted">/</span> {header('artist', 'Artist')}
+            </th>
+            <th>{header('album', 'Album')}</th>
+            <th className="year">{header('year', 'Year')}</th>
             <th>Collections</th>
+            <th className="added">{header('added', 'Added')}</th>
             <th />
           </tr>
         </thead>
@@ -89,6 +113,27 @@ export function SongTable({
     </>
   );
 }
+
+// Text and year columns start A→Z / oldest first; "Added" starts newest first.
+const DEFAULT_DIR: Record<SortKey, Sort['dir']> = { added: 'desc', year: 'asc', title: 'asc', artist: 'asc', album: 'asc' };
+
+/** A column title that sorts by it; clicking the active column flips the direction. */
+function SortHeader(props: { sortKey: SortKey; label: string; sort: Sort; onSort: (sort: Sort) => void }) {
+  const active = props.sort.key === props.sortKey;
+  const next: Sort = active
+    ? { key: props.sortKey, dir: props.sort.dir === 'asc' ? 'desc' : 'asc' }
+    : { key: props.sortKey, dir: DEFAULT_DIR[props.sortKey] };
+  return (
+    <button className={`sort${active ? ' active' : ''}`} onClick={() => props.onSort(next)}>
+      {props.label}
+      {active && (props.sort.dir === 'asc' ? ' ▲' : ' ▼')}
+    </button>
+  );
+}
+
+const sameYear = (t: number) => new Date(t).getFullYear() === new Date().getFullYear();
+const formatAdded = (t: number) =>
+  new Date(t).toLocaleDateString(undefined, sameYear(t) ? { day: 'numeric', month: 'short' } : { dateStyle: 'medium' });
 
 interface RowProps {
   song: Song;
@@ -115,10 +160,16 @@ const SongRow = memo(function SongRow({
       </td>
       <td className="cover">{s.imageUrl && <img src={s.imageUrl} alt="" loading="lazy" />}</td>
       <td>
-        <div className="title">{s.title}</div>
-        <div className="muted">{s.artists.join(', ')}</div>
+        <div className="title" title={s.title}>
+          {s.title}
+        </div>
+        <div className="muted clip" title={s.artists.join(', ')}>
+          {s.artists.join(', ')}
+        </div>
       </td>
-      <td className="muted album">{s.album}</td>
+      <td className="muted album" title={s.album}>
+        {s.album}
+      </td>
       <td className="year">
         <YearCell song={s} lookup={yearLookup} actions={yearActions} />
       </td>
@@ -131,6 +182,9 @@ const SongRow = memo(function SongRow({
               {c.name}
             </span>
           ))}
+      </td>
+      <td className="added muted" title={new Date(s.addedAt).toLocaleString()}>
+        {formatAdded(s.addedAt)}
       </td>
       <td className="actions">
         <PlayButton song={s} />
