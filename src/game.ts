@@ -9,17 +9,19 @@ export interface GameSetup {
   /** Empty means every decade. */
   decades: number[];
   teams: string[];
-  /** Timeline: cards (plus extra points) to win. Guess: points to win. */
+  /** Timeline: cards to win. Guess: points to win. */
   target: number;
   /** Start each song somewhere in the middle (harder). */
   randomStart: boolean;
-  /** Timeline: an extra point each for the exact year, the artist and the title. */
+  /** Timeline: an extra point each for the exact year, the artist and the title, used as a tiebreaker. */
   extraPoints?: boolean;
 }
 
 export interface Team {
   name: string;
   score: number;
+  /** Timeline extra points; they only break ties. */
+  bonus?: number;
   /** Timeline mode: song ids in timeline order. */
   timeline: string[];
 }
@@ -102,9 +104,12 @@ function startRound(game: Game): Game {
   return { ...game, deck, round: { songId, revealed: false } };
 }
 
+/** Ranks by score, then by extra points (the tiebreaker). */
+export const compareTeams = (a: Team, b: Team) => b.score - a.score || (b.bonus ?? 0) - (a.bonus ?? 0);
+
 function finish(game: Game): Game {
-  const best = Math.max(...game.teams.map((t) => t.score));
-  const leaders = game.teams.flatMap((t, i) => (t.score === best ? [i] : []));
+  const best = [...game.teams].sort(compareTeams)[0];
+  const leaders = game.teams.flatMap((t, i) => (compareTeams(t, best) === 0 ? [i] : []));
   return { ...game, round: null, winner: leaders.length === 1 ? leaders[0] : -1 };
 }
 
@@ -123,12 +128,13 @@ export function reveal(game: Game): Game {
   return { ...game, round: { ...game.round, revealed: true, awarded: { title: false, artist: false, year: false } } };
 }
 
-/** Toggles a point for the current team (Guess mode, or Timeline extra points). */
+/** Toggles a point for the current team: a score point in Guess mode, a tiebreaker point in Timeline. */
 export function toggleAward(game: Game, field: 'title' | 'artist' | 'year'): Game {
   const round = game.round;
   if (!round?.awarded) return game;
   const on = !round.awarded[field];
-  const teams = game.teams.map((t, i) => (i === game.turn ? { ...t, score: t.score + (on ? 1 : -1) } : t));
+  const key = game.setup.mode === 'timeline' ? 'bonus' : 'score';
+  const teams = game.teams.map((t, i) => (i === game.turn ? { ...t, [key]: (t[key] ?? 0) + (on ? 1 : -1) } : t));
   return { ...game, teams, round: { ...round, awarded: { ...round.awarded, [field]: on } } };
 }
 

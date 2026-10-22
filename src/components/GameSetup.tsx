@@ -30,7 +30,8 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
       decades: last?.decades ?? [],
       teams: last?.teams ?? ['Team 1', 'Team 2'],
       target: last?.target ?? 10,
-      randomStart: last?.randomStart ?? false,
+      // Not remembered: a harder game is a one-off choice.
+      randomStart: false,
       extraPoints: last?.extraPoints ?? false,
     };
   });
@@ -165,9 +166,10 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
         </div>
       </section>
 
-      <section className="setup-row">
+      <section>
+        <h3>Options</h3>
         <label className="inline">
-          {setup.mode === 'timeline' && setup.extraPoints ? 'Points to win (cards + extras)' : mode.target}
+          {mode.target}
           <input
             type="number"
             min={1}
@@ -182,16 +184,18 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           Harder: random start
         </label>
         {setup.mode === 'timeline' && (
-          <label className="inline" title="After each card, one extra point each for naming the exact year, the artist and the title">
+          <label className="inline" title="After each card, one extra point each for naming the exact year, the artist and the title. They only decide a tie.">
             <input
               type="checkbox"
               checked={!!setup.extraPoints}
               onChange={(e) => patch({ extraPoints: e.target.checked })}
             />
-            Extra points: exact year, artist, title
+            Extra points for the exact year, artist and title (tiebreaker)
           </label>
         )}
-        <div className="spacer" />
+      </section>
+
+      <section className="start-row">
         <button
           className="primary big"
           disabled={!teams.length || !enough}

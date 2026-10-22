@@ -44,7 +44,7 @@ Built, not yet played for real.
 - [x] **Guess the song**: play a song with the card hidden, then reveal title, artist and year; the host awards a point per correct part.
 - [x] **Timeline** (Hitster rules): each team starts with one face-up card; place the new song before, between or after the existing cards; a correct placement keeps the card; first to N cards wins.
 - [x] Timeline: pick a slot, then confirm it (button or Enter), so a misclick can be changed.
-- [x] Timeline extra points (setup option): +1 each for the exact year, the artist and the title, whether or not the card was placed right. The target then counts cards + extras.
+- [x] Timeline extra points (setup option): +1 each for the exact year, the artist and the title, whether or not the card was placed right. They only break a tie on cards.
 - [ ] Timeline "steal": another team may place a card the current team got wrong.
 - [ ] **Closest year**: everyone guesses the year; closest wins the point, and an exact year scores a bonus.
 - [ ] **Decade round** or **artist speed round**: quick formats for younger players.

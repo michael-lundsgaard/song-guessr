@@ -694,11 +694,9 @@ button.big {
   gap: 10px;
 }
 
-.game-setup .setup-row {
+.game-setup .start-row {
   flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  justify-content: flex-end;
 }
 
 .mode-picker {

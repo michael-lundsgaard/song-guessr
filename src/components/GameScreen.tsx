@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { endGame, markPlayed, nextTurn, place, reveal, toggleAward, type Game } from '../game';
+import { compareTeams, endGame, markPlayed, nextTurn, place, reveal, toggleAward, type Game } from '../game';
 import { isYearSuspect, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
@@ -83,7 +83,7 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
   }, []);
 
   if (game.winner != null) {
-    const ranked = [...game.teams].sort((a, b) => b.score - a.score);
+    const ranked = [...game.teams].sort(compareTeams);
     return (
       <div className="game">
         <div className="winner">
@@ -93,6 +93,7 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
             {ranked.map((t) => (
               <li key={t.name}>
                 {t.name} <b>{t.score}</b>
+                {game.setup.extraPoints && <span className="muted"> (+{t.bonus ?? 0} extra)</span>}
               </li>
             ))}
           </ol>
@@ -112,7 +113,11 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
           <div key={i} className={`team-score${i === game.turn ? ' current' : ''}`}>
             <span>{t.name}</span>
             <b>{t.score}</b>
-            {isTimeline && game.setup.extraPoints && <span className="muted small-note">{t.timeline.length} cards</span>}
+            {isTimeline && game.setup.extraPoints && (
+              <span className="muted small-note" title="Extra points only decide a tie">
+                +{t.bonus ?? 0}
+              </span>
+            )}
           </div>
         ))}
         <div className="spacer" />
@@ -171,7 +176,7 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
 
           {round.awarded && (
             <div className="awards">
-              {isTimeline && <span className="muted">Extra points:</span>}
+              {isTimeline && <span className="muted">Extra points (tiebreaker):</span>}
               {(['title', 'artist', 'year'] as const).map((field) => (
                 <button
                   key={field}
