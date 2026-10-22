@@ -66,7 +66,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
   }
 
   function playSong(s: Song) {
-    void play(s, { randomStart: game.setup.randomStart });
+    void play(s, { randomStart: game.setup.randomStart, secret: true });
     markPlayed(s.id);
   }
 

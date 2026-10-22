@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { makeLibrary, makeTimelineGame, seed } from './fixtures';
+import { fakeLogin, makeLibrary, makeTimelineGame, seed } from './fixtures';
 
 const shot = (name: string) => ({ path: `e2e/.results/screens/${name}.png`, fullPage: true });
 
@@ -171,4 +171,15 @@ test('winner: play again starts a new game with the same teams and fresh songs',
   await expect(page.locator('.team-score')).toHaveCount(2);
   await expect(page.locator('.team-score').first()).toContainText('The Hitmakers');
   await expect(page.locator('.team-score b').first()).toHaveText('1');
+});
+
+test('going to the library during a game never names the game song', async ({ page }) => {
+  const lib = makeLibrary();
+  await seed(page, lib, { ...fakeLogin(), 'sg.page': 'play' });
+  await startGame(page, /^Timeline/);
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  const bar = page.locator('.player-bar');
+  await expect(bar).toContainText('Game song (hidden)');
+  // No row shows a pause button (that would point at the playing song).
+  await expect(page.locator('.songs .play', { hasText: '❚❚' })).toHaveCount(0);
 });

@@ -21,7 +21,7 @@ export function PlayPage({ lib, connected }: { lib: Library; connected: boolean 
     started.teams.forEach((team) => team.timeline.forEach(markPlayed));
     const first = started.round && lib.songs[started.round.songId];
     if (first) {
-      void play(first, { randomStart: setup.randomStart });
+      void play(first, { randomStart: setup.randomStart, secret: true });
       markPlayed(first.id);
     }
   }

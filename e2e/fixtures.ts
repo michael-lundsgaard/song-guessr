@@ -91,3 +91,14 @@ export async function seed(page: Page, lib: Library, storage: Record<string, unk
     for (const [k, v] of Object.entries(items)) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
   }, storage);
 }
+
+/** localStorage that makes the app think Spotify is connected (all Spotify traffic is still blocked). */
+export const fakeLogin = () => ({
+  'sg.spotifyToken': {
+    accessToken: 'test',
+    refreshToken: 'test',
+    expiresAt: Date.now() + 3_600_000,
+    scope:
+      'playlist-read-private playlist-read-collaborative user-library-read user-read-playback-state user-modify-playback-state streaming user-read-email user-read-private',
+  },
+});

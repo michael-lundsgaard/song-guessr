@@ -24,6 +24,8 @@ export interface NowPlaying {
   durationMs: number;
   /** Where the song started; replay jumps back here. */
   startMs: number;
+  /** A game song: the library must not show which one it is. */
+  secret?: boolean;
 }
 
 export interface PlayerState {
@@ -62,6 +64,9 @@ function set(patch: Partial<PlayerState>) {
   state = { ...state, ...patch };
   listeners.forEach((l) => l());
 }
+
+/** The current state, for code outside components. */
+export const getPlayer = () => state;
 
 export function usePlayer(): PlayerState {
   return useSyncExternalStore(
@@ -236,11 +241,11 @@ function randomStart(durationMs: number) {
 }
 
 /** Plays a song. Call from a click handler: browsers only allow audio after a user gesture. */
-export async function play(song: { uri: string; durationMs: number }, options: { randomStart?: boolean; startMs?: number } = {}) {
+export async function play(song: { uri: string; durationMs: number }, options: { randomStart?: boolean; startMs?: number; secret?: boolean } = {}) {
   // Must run synchronously inside the gesture, before any await.
   if (state.target === BROWSER) void sdkPlayer?.activateElement();
   const startMs = options.startMs ?? (options.randomStart ? randomStart(song.durationMs) : 0);
-  const current = { uri: song.uri, durationMs: song.durationMs, startMs };
+  const current = { uri: song.uri, durationMs: song.durationMs, startMs, secret: options.secret };
   set({ current, playing: true, positionMs: startMs, positionAt: Date.now(), error: '' });
   await run(async () => {
     const deviceId = await readyDeviceId();

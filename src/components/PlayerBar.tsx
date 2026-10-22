@@ -16,7 +16,8 @@ import { useT } from '../i18n';
 export function PlayButton({ song }: { song: { uri: string; durationMs: number } }) {
   const t = useT();
   const p = usePlayer();
-  const isCurrent = p.current?.uri === song.uri;
+  // A game song never shows as playing in the library.
+  const isCurrent = p.current?.uri === song.uri && !p.current.secret;
   return (
     <button
       className="mini play"
@@ -67,7 +68,7 @@ export function PlayerBar({
           <button className="mini play" disabled={!p.current} onClick={() => togglePlay()} title={t.playPauseTitle}>
             {p.playing ? '❚❚' : '▶'}
           </button>
-          <span className="now muted">{p.current ? (titleFor?.(p.current.uri) ?? '') : t.nothingPlaying}</span>
+          <span className="now muted">{!p.current ? t.nothingPlaying : p.current.secret ? t.secretSong : (titleFor?.(p.current.uri) ?? '')}</span>
         </>
       )}
       {p.error && <span className="error-text">{p.error}</span>}

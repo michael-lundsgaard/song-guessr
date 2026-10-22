@@ -26,7 +26,7 @@ import {
   songYear,
   upsertSongs,
 } from './library';
-import { initBrowserPlayer } from './player';
+import { getPlayer, initBrowserPlayer, pause } from './player';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
 import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
@@ -53,6 +53,8 @@ export default function App() {
   const [showImport, setShowImport] = useState(true);
   const [page, setPageState] = useState<Page>(() => (localStorage.getItem(PAGE_KEY) === 'play' ? 'play' : 'library'));
   const setPage = (p: Page) => {
+    // Leaving a game: stop its song, so the library can't give it away.
+    if (p === 'library' && getPlayer().current?.secret && getPlayer().playing) void pause();
     localStorage.setItem(PAGE_KEY, p);
     setPageState(p);
   };
