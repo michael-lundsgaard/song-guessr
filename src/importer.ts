@@ -1,6 +1,6 @@
 import { t } from './i18n';
 import type { ImportItem } from './parse';
-import { fetchAlbum, fetchLikedSongs, fetchPlaylist, fetchTrack, SpotifyError } from './spotify';
+import { fetchAlbum, fetchLikedSongs, fetchPlaylist, fetchTrack, isQuotaExceeded, SpotifyError } from './spotify';
 import type { CollectionSource, Library, SongData } from './types';
 
 export interface LogEntry {
@@ -58,7 +58,17 @@ export async function runImport(
     if (yearHint) result.yearHints[d.id] = yearHint;
   };
 
+  // Once Spotify's quota is used up every further call fails, so stop instead of trying the rest.
+  let quotaHit = false;
+  const stopOnQuota = (e: unknown) => {
+    if (!isQuotaExceeded(e)) return false;
+    if (!quotaHit) log('error', describe(e, ''));
+    quotaHit = true;
+    return true;
+  };
+
   for (const item of items) {
+    if (quotaHit) break;
     if (item.kind !== 'playlist' && item.kind !== 'album' && item.kind !== 'liked') continue;
     try {
       onProgress(t().loadingWhat(item.kind));
@@ -75,6 +85,7 @@ export async function runImport(
       if (list.skipped) log('warn', t().listSkipped(list.name, list.skipped));
     } catch (e) {
       result.failed++;
+      if (stopOnQuota(e)) break;
       const what = item.kind === 'liked' ? t().likedSongs : `${item.kind} ${item.id}`;
       log('error', t().couldNotLoad(what, describe(e, item.kind)));
     }
@@ -85,6 +96,10 @@ export async function runImport(
   let reused = 0;
   await pool(tracks, 4, async (item) => {
     try {
+      if (quotaHit && !lib.songs[item.id]) {
+        result.failed++;
+        return;
+      }
       if (lib.songs[item.id]) {
         songIds.add(item.id);
         if (item.yearHint) result.yearHints[item.id] = item.yearHint;
@@ -99,11 +114,12 @@ export async function runImport(
       }
     } catch (e) {
       result.failed++;
-      log('error', t().trackFailed(item.id, describe(e, item.kind)));
+      if (!stopOnQuota(e)) log('error', t().trackFailed(item.id, describe(e, item.kind)));
     }
     onProgress(t().lookingUp(++done, tracks.length));
   });
   if (reused) log('ok', t().alreadyInLibrary(reused));
+  if (quotaHit) log('warn', t().importStopped);
 
   result.fetched = [...fetched.values()];
   result.songIds = [...songIds];

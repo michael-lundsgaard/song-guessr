@@ -30,7 +30,7 @@ import {
   upsertSongs,
 } from './library';
 import { initBrowserPlayer } from './player';
-import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
+import { getClientId, handleAuthCallback, isLoggedIn, isQuotaExceeded, login, logout, needsReconnect } from './spotify';
 import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
 import type { Collection, CollectionSource, Library, Song } from './types';
@@ -108,16 +108,19 @@ export default function App() {
   const [findingYears, setFindingYears] = useState(false);
   const libRef = useRef(lib);
   libRef.current = lib;
+  /** Returns false when Spotify's quota is used up, so a bulk lookup can stop. */
   const findYear = useCallback(async (id: string) => {
     const song = libRef.current?.songs[id];
-    if (!song) return;
+    if (!song) return true;
     const setLookup = (lookup: YearLookup) => setYearLookups((m) => ({ ...m, [id]: lookup }));
     setLookup({ state: 'loading' });
     try {
       setLookup({ state: 'done', release: await findOriginalRelease(song) });
     } catch (e) {
       setLookup({ state: 'error', message: e instanceof Error ? e.message : String(e) });
+      return !isQuotaExceeded(e);
     }
+    return true;
   }, []);
   const yearActions = useMemo<YearActions>(
     () => ({
@@ -206,7 +209,10 @@ export default function App() {
   async function findAllYears() {
     const ids = suspects.filter((s) => yearLookups[s.id]?.state !== 'done').map((s) => s.id);
     setFindingYears(true);
-    await pool(ids, 3, findYear);
+    let quotaHit = false;
+    await pool(ids, 3, async (id) => {
+      if (!quotaHit && !(await findYear(id))) quotaHit = true;
+    });
     setFindingYears(false);
   }
 

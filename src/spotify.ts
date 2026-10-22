@@ -27,10 +27,17 @@ interface StoredToken {
 }
 
 export class SpotifyError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public reason?: string,
+  ) {
     super(message);
   }
 }
+
+/** Spotify's quota for the app is used up; further calls fail until it resets. */
+export const isQuotaExceeded = (e: unknown) => e instanceof SpotifyError && e.reason === 'QUOTA_EXCEEDED';
 
 export const redirectUri = () => `${window.location.origin}/`;
 
@@ -170,9 +177,18 @@ async function apiRequest<T>(method: string, pathOrUrl: string, body?: unknown, 
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (res.status === 429 && attempt < 5) {
-    await sleep(Number(res.headers.get('Retry-After') ?? 2) * 1000);
-    return apiRequest(method, pathOrUrl, body, attempt + 1);
+  if (res.status === 429) {
+    // The app's quota is used up: retrying only burns into the next one, so give up at once.
+    const reason = await res
+      .clone()
+      .json()
+      .then((j) => j?.error?.reason)
+      .catch(() => undefined);
+    if (reason === 'QUOTA_EXCEEDED') throw new SpotifyError(429, t().quotaExceeded, reason);
+    if (attempt < 5) {
+      await sleep(Number(res.headers.get('Retry-After') ?? 2) * 1000);
+      return apiRequest(method, pathOrUrl, body, attempt + 1);
+    }
   }
   if (res.status === 401 && attempt === 0) {
     await accessToken(true);

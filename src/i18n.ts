@@ -188,6 +188,9 @@ const en = {
   couldNotLoad: (what: string, message: string) => `Couldn't load ${what}: ${message}`,
   notPlayable: (id: string) => `Track ${id} is not playable on Spotify`,
   trackFailed: (id: string, message: string) => `Track ${id}: ${message}`,
+  quotaExceeded: "Spotify's limit for the app is used up. Wait a while before trying again",
+  importStopped:
+    'Import stopped early. Songs already loaded are kept; paste the same list again later and only the missing ones are fetched.',
   alreadyInLibrary: (n: number) => `${n} songs were already in the library (not fetched again)`,
   lookingUp: (done: number, total: number) => `Looking up songs… ${done}/${total}`,
   notRegistered: (message: string) =>
@@ -525,6 +528,9 @@ const da: Messages = {
   couldNotLoad: (what, message) => `Kunne ikke indlæse ${what}: ${message}`,
   notPlayable: (id) => `Sangen ${id} kan ikke afspilles på Spotify`,
   trackFailed: (id, message) => `Sangen ${id}: ${message}`,
+  quotaExceeded: 'Spotify-grænsen for appen er brugt op. Vent et stykke tid, før du prøver igen',
+  importStopped:
+    'Importen stoppede før tid. De hentede sange er gemt; indsæt den samme liste igen senere, så hentes kun dem, der mangler.',
   alreadyInLibrary: (n) => `${n} sange var allerede i biblioteket (ikke hentet igen)`,
   lookingUp: (done, total) => `Slår sange op… ${done}/${total}`,
   notRegistered: (message) =>

@@ -96,6 +96,35 @@ test('liked songs: pinned first with a heart, and can be updated from Spotify', 
   await page.screenshot(shot('liked-songs'));
 });
 
+test("import: Spotify's QUOTA_EXCEEDED stops at once instead of retrying", async ({ page }) => {
+  await seed(page, makeLibrary(), fakeLogin());
+  let calls = 0;
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  };
+  await page.route('https://api.spotify.com/**', (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    if (route.request().url().includes('/v1/tracks/')) calls++;
+    return route.fulfill({
+      status: 429,
+      headers: { ...cors, 'Retry-After': '1' },
+      contentType: 'application/json',
+      body: JSON.stringify({ error: { status: 429, message: 'Too many requests', reason: 'QUOTA_EXCEEDED' } }),
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add songs' }).click();
+  const links = Array.from({ length: 12 }, (_, i) => `https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQ${'abcdefghijkl'[i]}`);
+  await page.locator('textarea').fill(links.join('\n'));
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(page.locator('.log')).toContainText("Spotify's limit for the app is used up");
+  await expect(page.locator('.log')).toContainText('Import stopped early');
+  // Only the calls already in flight (four at a time), and none of them retried.
+  expect(calls).toBeLessThanOrEqual(4);
+  await page.screenshot(shot('import-quota'));
+});
+
 test('an older collection can be linked to its Spotify playlist', async ({ page }) => {
   await seed(page, makeLibrary(), fakeLogin());
   await page.goto('/');
