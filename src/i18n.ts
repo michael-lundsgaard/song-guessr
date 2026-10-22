@@ -383,8 +383,8 @@ const da: Messages = {
   loadErrorHelp: 'Biblioteket gemmes af udviklingsserveren. Start appen med',
   loadingLibrary: 'Indlæser biblioteket…',
 
-  decadeShort: (decade) => `${String(decade).slice(2)}'erne`,
-  decade: (decade) => `${decade}'erne`,
+  decadeShort: (decade) => `${String(decade).slice(2)}s`,
+  decade: (decade) => `${decade}s`,
 
   allSongs: 'Alle sange',
   unsorted: 'Ikke i en samling',
