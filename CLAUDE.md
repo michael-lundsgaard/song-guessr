@@ -25,7 +25,7 @@ A home-made Hitster: a Spotify-backed song library (React + Vite, TypeScript) wi
 - Search returns at most 10 results per page (`limit=10`, page with `offset`).
 - Playlist contents come from `/playlists/{id}/items` (older `/tracks` as fallback), and only for playlists the user owns or collaborates on.
 - No 30-second `preview_url`; previews go through the player.
-- Rate limit is a rolling 30-second window, lower in development mode. Calls retry on 429 using `Retry-After`; keep bulk work in small pools (3–4 concurrent) and only call the API on a user action.
+- Rate limit is a rolling 30-second window, lower in development mode. Calls retry on 429 using `Retry-After`, except `QUOTA_EXCEEDED` (the app's quota is used up), which fails at once and stops imports and bulk lookups (`isQuotaExceeded`); keep bulk work in small pools (3–4 concurrent) and only call the API on a user action.
 - The game modes knowingly break the Developer Policy (no games/trivia; metadata shown during playback). The owner accepted this for a private, localhost-only game; see README.md. Never add hosting, deployment or sharing of the game.
 
 ## Conventions
