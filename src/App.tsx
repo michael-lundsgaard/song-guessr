@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { ImportPanel, type ImportTarget } from './components/ImportPanel';
 import { DuplicatesView } from './components/DuplicatesView';
 import { PlayerBar } from './components/PlayerBar';
+import { PlayPage } from './components/PlayPage';
 import { SettingsDialog } from './components/SettingsDialog';
 import { SongTable, type Sort, type SortKey, type YearActions } from './components/SongTable';
 import { pool, type ImportResult } from './importer';
@@ -35,6 +36,9 @@ const ALL = '__all__';
 const UNSORTED = '__unsorted__';
 const DUPLICATES = '__duplicates__';
 
+type Page = 'library' | 'play';
+const PAGE_KEY = 'sg.page';
+
 export default function App() {
   const [lib, setLib] = useState<Library | null>(null);
   const [loadError, setLoadError] = useState('');
@@ -43,6 +47,11 @@ export default function App() {
   const [connected, setConnected] = useState(isLoggedIn);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showImport, setShowImport] = useState(true);
+  const [page, setPageState] = useState<Page>(() => (localStorage.getItem(PAGE_KEY) === 'play' ? 'play' : 'library'));
+  const setPage = (p: Page) => {
+    localStorage.setItem(PAGE_KEY, p);
+    setPageState(p);
+  };
 
   const [view, setView] = useState<string>(ALL);
   const [query, setQuery] = useState('');
@@ -253,11 +262,16 @@ export default function App() {
   if (!lib) return <div className="fatal muted">Loading library…</div>;
 
   return (
-    <div className="app">
+    <div className={`app${page === 'play' ? ' play' : ''}`}>
       <header className="topbar">
-        <h1>
-          Song Guessr <span className="muted">Library</span>
-        </h1>
+        <h1>Song Guessr</h1>
+        <nav className="page-tabs">
+          {(['library', 'play'] as const).map((p) => (
+            <button key={p} className={page === p ? 'active' : undefined} onClick={() => setPage(p)}>
+              {p === 'library' ? 'Library' : 'Play'}
+            </button>
+          ))}
+        </nav>
         <span className={`save ${saveState}`}>
           {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Save failed!' : 'Saved'}
         </span>
@@ -300,220 +314,226 @@ export default function App() {
         </button>
       </header>
 
-      <aside className="sidebar">
-        <nav>
-          <SidebarItem label="All songs" count={allSongs.length} active={view === ALL} onClick={() => setView(ALL)} />
-          <SidebarItem
-            label="Not in a collection"
-            count={collectionCounts.unsorted}
-            active={view === UNSORTED}
-            onClick={() => setView(UNSORTED)}
-          />
-          {duplicates.length > 0 && (
-            <SidebarItem
-              label="Duplicates"
-              count={duplicates.length}
-              active={view === DUPLICATES}
-              onClick={() => setView(DUPLICATES)}
-            />
-          )}
-          <h3>Collections</h3>
-          {collections.map((c) => (
-            <SidebarItem
-              key={c.id}
-              label={c.name}
-              count={collectionCounts.counts[c.id] ?? 0}
-              active={view === c.id}
-              onClick={() => setView(c.id)}
-            />
-          ))}
-          <button className="ghost new-collection" onClick={newCollection}>
-            + New collection{selected.size ? ` from ${selected.size} selected` : ''}
-          </button>
-        </nav>
-      </aside>
-
-      <main className="main">
-        <div className="view-header">
-          <h2>
-            {view === ALL
-              ? 'All songs'
-              : view === UNSORTED
-                ? 'Not in a collection'
-                : view === DUPLICATES
-                  ? 'Duplicates'
-                  : activeCollection?.name}
-          </h2>
-          {activeCollection && (
-            <>
-              <button
-                className="ghost small"
-                onClick={() => {
-                  const name = prompt('Rename collection', activeCollection.name);
-                  if (name) update((l) => renameCollection(l, activeCollection.id, name));
-                }}
-              >
-                Rename
-              </button>
-              <button
-                className="ghost small danger"
-                onClick={() => {
-                  if (!confirm(`Delete collection "${activeCollection.name}"? The songs stay in the library.`)) return;
-                  update((l) => deleteCollection(l, activeCollection.id));
-                  setView(ALL);
-                }}
-              >
-                Delete collection
-              </button>
-            </>
-          )}
-          <div className="spacer" />
-          <button className={showImport ? 'ghost' : 'primary'} onClick={() => setShowImport((v) => !v)}>
-            {showImport ? 'Hide import' : '+ Add songs'}
-          </button>
-        </div>
-
-        {showImport && (
-          <ImportPanel
-            lib={lib}
-            connected={connected}
-            defaultCollectionId={activeCollection?.id ?? null}
-            onImported={handleImported}
-          />
-        )}
-
-        {view === DUPLICATES ? (
-          <DuplicatesView
-            groups={duplicates}
-            collections={lib.collections}
-            onMerge={mergeGroup}
-            onIgnore={(group) => update((l) => ignoreDuplicates(l, group))}
-          />
-        ) : (
-          <>
-            {activeCollection && (
-              <Readiness
-                songs={inView}
-                suspectCount={suspectCount}
-                decadeCounts={decadeCounts}
-                onShowSuspects={() => setSuspectOnly(true)}
+      {page === 'library' ? (
+        <>
+          <aside className="sidebar">
+            <nav>
+              <SidebarItem label="All songs" count={allSongs.length} active={view === ALL} onClick={() => setView(ALL)} />
+              <SidebarItem
+                label="Not in a collection"
+                count={collectionCounts.unsorted}
+                active={view === UNSORTED}
+                onClick={() => setView(UNSORTED)}
               />
-            )}
+              {duplicates.length > 0 && (
+                <SidebarItem
+                  label="Duplicates"
+                  count={duplicates.length}
+                  active={view === DUPLICATES}
+                  onClick={() => setView(DUPLICATES)}
+                />
+              )}
+              <h3>Collections</h3>
+              {collections.map((c) => (
+                <SidebarItem
+                  key={c.id}
+                  label={c.name}
+                  count={collectionCounts.counts[c.id] ?? 0}
+                  active={view === c.id}
+                  onClick={() => setView(c.id)}
+                />
+              ))}
+              <button className="ghost new-collection" onClick={newCollection}>
+                + New collection{selected.size ? ` from ${selected.size} selected` : ''}
+              </button>
+            </nav>
+          </aside>
 
-            <div className="toolbar">
-              <input
-                className="search"
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search title, artist, album…"
-              />
-              {suspectCount > 0 && (
-                <label className="inline" title="Songs whose Spotify year may be a remaster/compilation year">
-                  <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />⚠ Check
-                  year ({suspectCount})
-                </label>
-              )}
-              {suspectCount > 0 && (
-                <button
-                  className="ghost small"
-                  disabled={!connected || findingYears}
-                  title="Search Spotify for the earliest release of every ⚠ song in this view"
-                  onClick={findAllYears}
-                >
-                  {findingYears ? 'Finding original years…' : '🔍 Find original years'}
-                </button>
-              )}
-              {foundYears.length > 0 && (
-                <button
-                  className="ghost small"
-                  title="Use the earliest release year found for each ⚠ song"
-                  onClick={() => update((l) => foundYears.reduce((acc, f) => setYear(acc, f.id, f.year), l))}
-                >
-                  Use found years ({foundYears.length})
-                </button>
-              )}
-            </div>
-
-            {decadeCounts.length > 0 && (
-              <div className="decades" title="Songs per decade — handy for a balanced timeline">
-                {decadeCounts.map(([d, n]) => (
+          <main className="main">
+            <div className="view-header">
+              <h2>
+                {view === ALL
+                  ? 'All songs'
+                  : view === UNSORTED
+                    ? 'Not in a collection'
+                    : view === DUPLICATES
+                      ? 'Duplicates'
+                      : activeCollection?.name}
+              </h2>
+              {activeCollection && (
+                <>
                   <button
-                    key={d}
-                    className={`decade${decade === d ? ' active' : ''}`}
-                    onClick={() => setDecade(decade === d ? null : d)}
-                  >
-                    <span>{String(d).slice(2)}s</span>
-                    <b>{n}</b>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {selected.size > 0 && (
-              <div className="selection-bar">
-                <b>{selected.size} selected</b>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    if (id) update((l) => addToCollection(l, selected, id));
-                  }}
-                >
-                  <option value="">Add to collection…</option>
-                  {collections.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                {activeCollection && (
-                  <button
-                    className="ghost"
+                    className="ghost small"
                     onClick={() => {
-                      update((l) => removeFromCollection(l, selected, activeCollection.id));
-                      setSelected(new Set());
+                      const name = prompt('Rename collection', activeCollection.name);
+                      if (name) update((l) => renameCollection(l, activeCollection.id, name));
                     }}
                   >
-                    Remove from "{activeCollection.name}"
+                    Rename
                   </button>
-                )}
-                <button
-                  className="ghost danger"
-                  onClick={() => {
-                    if (!confirm(`Delete ${selected.size} songs from the library?`)) return;
-                    update((l) => deleteSongs(l, selected));
-                    setSelected(new Set());
-                  }}
-                >
-                  Delete from library
-                </button>
-                <div className="spacer" />
-                <button className="ghost" onClick={() => setSelected(new Set())}>
-                  Clear selection
-                </button>
-              </div>
+                  <button
+                    className="ghost small danger"
+                    onClick={() => {
+                      if (!confirm(`Delete collection "${activeCollection.name}"? The songs stay in the library.`)) return;
+                      update((l) => deleteCollection(l, activeCollection.id));
+                      setView(ALL);
+                    }}
+                  >
+                    Delete collection
+                  </button>
+                </>
+              )}
+              <div className="spacer" />
+              <button className={showImport ? 'ghost' : 'primary'} onClick={() => setShowImport((v) => !v)}>
+                {showImport ? 'Hide import' : '+ Add songs'}
+              </button>
+            </div>
+
+            {showImport && (
+              <ImportPanel
+                lib={lib}
+                connected={connected}
+                defaultCollectionId={activeCollection?.id ?? null}
+                onImported={handleImported}
+              />
             )}
 
-            <p className="muted count">
-              Showing {shown.length} of {inView.length} songs
-            </p>
-            <SongTable
-              songs={shown}
-              collections={lib.collections}
-              selected={selected}
-              resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort.key}|${sort.dir}`}
-              sort={sort}
-              onSort={setSort}
-              yearLookups={yearLookups}
-              onToggle={toggle}
-              onToggleAll={toggleAll}
-              yearActions={yearActions}
-            />
-          </>
-        )}
-        <PlayerBar connected={connected} titleFor={titleFor} />
-      </main>
+            {view === DUPLICATES ? (
+              <DuplicatesView
+                groups={duplicates}
+                collections={lib.collections}
+                onMerge={mergeGroup}
+                onIgnore={(group) => update((l) => ignoreDuplicates(l, group))}
+              />
+            ) : (
+              <>
+                {activeCollection && (
+                  <Readiness
+                    songs={inView}
+                    suspectCount={suspectCount}
+                    decadeCounts={decadeCounts}
+                    onShowSuspects={() => setSuspectOnly(true)}
+                  />
+                )}
+
+                <div className="toolbar">
+                  <input
+                    className="search"
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search title, artist, album…"
+                  />
+                  {suspectCount > 0 && (
+                    <label className="inline" title="Songs whose Spotify year may be a remaster/compilation year">
+                      <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />⚠ Check
+                      year ({suspectCount})
+                    </label>
+                  )}
+                  {suspectCount > 0 && (
+                    <button
+                      className="ghost small"
+                      disabled={!connected || findingYears}
+                      title="Search Spotify for the earliest release of every ⚠ song in this view"
+                      onClick={findAllYears}
+                    >
+                      {findingYears ? 'Finding original years…' : '🔍 Find original years'}
+                    </button>
+                  )}
+                  {foundYears.length > 0 && (
+                    <button
+                      className="ghost small"
+                      title="Use the earliest release year found for each ⚠ song"
+                      onClick={() => update((l) => foundYears.reduce((acc, f) => setYear(acc, f.id, f.year), l))}
+                    >
+                      Use found years ({foundYears.length})
+                    </button>
+                  )}
+                </div>
+
+                {decadeCounts.length > 0 && (
+                  <div className="decades" title="Songs per decade — handy for a balanced timeline">
+                    {decadeCounts.map(([d, n]) => (
+                      <button
+                        key={d}
+                        className={`decade${decade === d ? ' active' : ''}`}
+                        onClick={() => setDecade(decade === d ? null : d)}
+                      >
+                        <span>{String(d).slice(2)}s</span>
+                        <b>{n}</b>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {selected.size > 0 && (
+                  <div className="selection-bar">
+                    <b>{selected.size} selected</b>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (id) update((l) => addToCollection(l, selected, id));
+                      }}
+                    >
+                      <option value="">Add to collection…</option>
+                      {collections.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    {activeCollection && (
+                      <button
+                        className="ghost"
+                        onClick={() => {
+                          update((l) => removeFromCollection(l, selected, activeCollection.id));
+                          setSelected(new Set());
+                        }}
+                      >
+                        Remove from "{activeCollection.name}"
+                      </button>
+                    )}
+                    <button
+                      className="ghost danger"
+                      onClick={() => {
+                        if (!confirm(`Delete ${selected.size} songs from the library?`)) return;
+                        update((l) => deleteSongs(l, selected));
+                        setSelected(new Set());
+                      }}
+                    >
+                      Delete from library
+                    </button>
+                    <div className="spacer" />
+                    <button className="ghost" onClick={() => setSelected(new Set())}>
+                      Clear selection
+                    </button>
+                  </div>
+                )}
+
+                <p className="muted count">
+                  Showing {shown.length} of {inView.length} songs
+                </p>
+                <SongTable
+                  songs={shown}
+                  collections={lib.collections}
+                  selected={selected}
+                  resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort.key}|${sort.dir}`}
+                  sort={sort}
+                  onSort={setSort}
+                  yearLookups={yearLookups}
+                  onToggle={toggle}
+                  onToggleAll={toggleAll}
+                  yearActions={yearActions}
+                />
+              </>
+            )}
+            <PlayerBar connected={connected} titleFor={titleFor} />
+          </main>
+        </>
+      ) : (
+        <PlayPage lib={lib} connected={connected} />
+      )}
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
