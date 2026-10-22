@@ -10,6 +10,9 @@ const SCOPES = [
   'user-read-playback-state',
   'user-modify-playback-state',
   'streaming',
+  // The Web Playback SDK checks the account (Premium) with these.
+  'user-read-email',
+  'user-read-private',
 ].join(' ');
 const CLIENT_ID_KEY = 'sg.spotifyClientId';
 const TOKEN_KEY = 'sg.spotifyToken';
@@ -154,16 +157,25 @@ async function accessToken(forceRefresh = false): Promise<string> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function apiGet<T>(pathOrUrl: string, attempt = 0): Promise<T> {
+const apiGet = <T>(pathOrUrl: string) => apiRequest<T>('GET', pathOrUrl);
+
+async function apiRequest<T>(method: string, pathOrUrl: string, body?: unknown, attempt = 0): Promise<T> {
   const url = pathOrUrl.startsWith('http') ? pathOrUrl : API_URL + pathOrUrl;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${await accessToken()}` } });
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${await accessToken()}`,
+      ...(body !== undefined && { 'Content-Type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (res.status === 429 && attempt < 5) {
     await sleep(Number(res.headers.get('Retry-After') ?? 2) * 1000);
-    return apiGet(pathOrUrl, attempt + 1);
+    return apiRequest(method, pathOrUrl, body, attempt + 1);
   }
   if (res.status === 401 && attempt === 0) {
     await accessToken(true);
-    return apiGet(pathOrUrl, attempt + 1);
+    return apiRequest(method, pathOrUrl, body, attempt + 1);
   }
   if (!res.ok) {
     // Error bodies are usually JSON, but some (e.g. "user may not be registered") are plain text.
@@ -174,8 +186,54 @@ async function apiGet<T>(pathOrUrl: string, attempt = 0): Promise<T> {
     } catch {}
     throw new SpotifyError(res.status, `HTTP ${res.status}: ${message}`);
   }
-  return res.json();
+  // Player endpoints answer 204, or 200 with an empty or non-JSON body (seen with the desktop app).
+  if (!res.headers.get('Content-Type')?.includes('application/json')) return undefined as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
+
+/** A fresh access token, for the Web Playback SDK. */
+export const getAccessToken = () => accessToken();
+
+// --- Playback (Spotify Connect) ---
+
+export interface Device {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
+  volume_percent: number | null;
+}
+
+export async function fetchDevices(): Promise<Device[]> {
+  const res = await apiGet<{ devices: Device[] }>('/me/player/devices');
+  return res.devices.filter((d) => d.id);
+}
+
+const deviceParam = (deviceId: string) => `device_id=${encodeURIComponent(deviceId)}`;
+
+export const playOnDevice = (deviceId: string, uri: string, positionMs = 0) =>
+  apiRequest<void>('PUT', `/me/player/play?${deviceParam(deviceId)}`, { uris: [uri], position_ms: positionMs });
+
+export const pauseDevice = (deviceId: string) => apiRequest<void>('PUT', `/me/player/pause?${deviceParam(deviceId)}`);
+
+export const resumeDevice = (deviceId: string) => apiRequest<void>('PUT', `/me/player/play?${deviceParam(deviceId)}`);
+
+export const seekDevice = (deviceId: string, positionMs: number) =>
+  apiRequest<void>('PUT', `/me/player/seek?position_ms=${Math.round(positionMs)}&${deviceParam(deviceId)}`);
+
+export const setDeviceVolume = (deviceId: string, percent: number) =>
+  apiRequest<void>('PUT', `/me/player/volume?volume_percent=${Math.round(percent)}&${deviceParam(deviceId)}`);
+
+export interface PlaybackState {
+  is_playing: boolean;
+  progress_ms: number | null;
+  device: { id: string } | null;
+  item: { uri: string; duration_ms: number } | null;
+}
+
+/** The account's current playback, or null when nothing is playing anywhere. */
+export const fetchPlaybackState = () => apiGet<PlaybackState | undefined>('/me/player').then((s) => s ?? null);
 
 // --- Spotify objects (only the fields we use) ---
 
@@ -293,7 +351,6 @@ export async function fetchAlbum(id: string): Promise<TrackList> {
   }
   return { name: album.name, tracks, skipped: 0 };
 }
-
 
 /** Up to `max` search results, fetched 10 at a time (the page size Spotify allows development-mode apps). */
 export async function searchTracks(query: string, max = 30): Promise<SongData[]> {

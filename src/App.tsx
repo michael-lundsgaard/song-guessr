@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ImportPanel, type ImportTarget } from './components/ImportPanel';
 import { DuplicatesView } from './components/DuplicatesView';
+import { PlayerBar } from './components/PlayerBar';
 import { SettingsDialog } from './components/SettingsDialog';
 import { SongTable, type YearActions } from './components/SongTable';
 import { pool, type ImportResult } from './importer';
@@ -112,6 +113,13 @@ export default function App() {
     [lib?.collections],
   );
   const allSongs = useMemo(() => Object.values(lib?.songs ?? {}), [lib?.songs]);
+  const titleFor = useCallback(
+    (uri: string) => {
+      const s = allSongs.find((song) => song.uri === uri);
+      return s && `${s.artists.join(', ')} – ${s.title}`;
+    },
+    [allSongs],
+  );
 
   const collectionCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -505,6 +513,7 @@ export default function App() {
             />
           </>
         )}
+        <PlayerBar connected={connected} titleFor={titleFor} />
       </main>
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />

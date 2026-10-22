@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { isYearSuspect, songYear } from '../library';
 import type { Collection, Song } from '../types';
 import { earlierRelease, type YearLookup } from '../versions';
+import { PlayButton } from './PlayerBar';
 
 export interface YearActions {
   set: (id: string, year: number | null) => void;
@@ -131,7 +132,8 @@ const SongRow = memo(function SongRow({
             </span>
           ))}
       </td>
-      <td>
+      <td className="actions">
+        <PlayButton song={s} />
         <a
           className="open"
           href={`https://open.spotify.com/track/${s.id}`}

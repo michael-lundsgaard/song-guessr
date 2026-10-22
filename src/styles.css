@@ -453,6 +453,19 @@ button.link {
   cursor: pointer;
 }
 
+.songs .actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.songs .actions > * + * {
+  margin-left: 8px;
+}
+
+button.mini.play {
+  min-width: 30px;
+}
+
 .tabs {
   display: flex;
   gap: 4px;
@@ -467,6 +480,25 @@ button.link {
 .tabs button.active {
   background: var(--panel-2);
   font-weight: 600;
+}
+
+.player-bar {
+  position: sticky;
+  bottom: -28px;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.player-bar button.mini {
+  font-size: 14px;
+  padding: 2px 10px;
 }
 
 .chip {

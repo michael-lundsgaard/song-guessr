@@ -3,6 +3,7 @@ import { runImport, type ImportResult, type LogEntry } from '../importer';
 import { LIKED_SONGS_LINK, parseImportText } from '../parse';
 import { searchTracks } from '../spotify';
 import type { Library, SongData } from '../types';
+import { PlayButton } from './PlayerBar';
 
 export interface ImportTarget {
   collectionId: string | null;
@@ -255,6 +256,7 @@ function SearchImport(props: {
                   </td>
                   <td className="year">{s.spotifyYear ?? '?'}</td>
                   <td className="actions">
+                    <PlayButton song={s} />
                     {inLibrary ? (
                       <span className="muted">In library</span>
                     ) : (
