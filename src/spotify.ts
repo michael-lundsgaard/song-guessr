@@ -299,3 +299,18 @@ export async function searchTrack(query: string): Promise<SongData | null> {
   const res = await apiGet<{ tracks: Paging<SpTrack> }>(`/search?${params}`);
   return toSongData(res.tracks.items[0]);
 }
+
+/** Up to `max` search results, fetched 10 at a time (the page size Spotify allows development-mode apps). */
+export async function searchTracks(query: string, max = 30): Promise<SongData[]> {
+  const songs: SongData[] = [];
+  for (let offset = 0; offset < max; offset += 10) {
+    const params = new URLSearchParams({ q: query, type: 'track', limit: '10', offset: String(offset) });
+    const res = await apiGet<{ tracks: Paging<SpTrack | null> }>(`/search?${params}`);
+    for (const t of res.tracks.items) {
+      const song = toSongData(t);
+      if (song) songs.push(song);
+    }
+    if (!res.tracks.next) break;
+  }
+  return songs;
+}

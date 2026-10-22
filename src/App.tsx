@@ -1,17 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ImportPanel, type ImportTarget } from './components/ImportPanel';
+import { DuplicatesView } from './components/DuplicatesView';
 import { SettingsDialog } from './components/SettingsDialog';
-import { SongTable } from './components/SongTable';
-import type { ImportResult } from './importer';
+import { SongTable, type YearActions } from './components/SongTable';
+import { pool, type ImportResult } from './importer';
 import {
   addToCollection,
   applyYearHints,
+  confirmYear,
   decadeOf,
   deleteCollection,
   deleteSongs,
   ensureCollection,
+  findDuplicates,
+  ignoreDuplicates,
   isYearSuspect,
   loadLibrary,
+  mergeSongs,
   removeFromCollection,
   renameCollection,
   saveLibrary,
@@ -21,12 +26,14 @@ import {
 } from './library';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
 import type { Library, Song } from './types';
+import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
 
 type Sort = 'added' | 'year' | 'title' | 'artist';
 type SaveState = 'saved' | 'saving' | 'error';
 
 const ALL = '__all__';
 const UNSORTED = '__unsorted__';
+const DUPLICATES = '__duplicates__';
 
 export default function App() {
   const [lib, setLib] = useState<Library | null>(null);
@@ -74,9 +81,30 @@ export default function App() {
   }, [lib]);
 
   const update = useCallback((fn: (l: Library) => Library) => setLib((l) => (l ? fn(l) : l)), []);
-  const handleSetYear = useCallback(
-    (id: string, year: number | null) => update((l) => setYear(l, id, year)),
-    [update],
+
+  // Original-year lookups live only for this session; accepting one stores the year on the song.
+  const [yearLookups, setYearLookups] = useState<Record<string, YearLookup>>({});
+  const [findingYears, setFindingYears] = useState(false);
+  const libRef = useRef(lib);
+  libRef.current = lib;
+  const findYear = useCallback(async (id: string) => {
+    const song = libRef.current?.songs[id];
+    if (!song) return;
+    const setLookup = (lookup: YearLookup) => setYearLookups((m) => ({ ...m, [id]: lookup }));
+    setLookup({ state: 'loading' });
+    try {
+      setLookup({ state: 'done', release: await findOriginalRelease(song) });
+    } catch (e) {
+      setLookup({ state: 'error', message: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
+  const yearActions = useMemo<YearActions>(
+    () => ({
+      set: (id, year) => update((l) => setYear(l, id, year)),
+      find: (id) => void findYear(id),
+      confirm: (id) => update((l) => confirmYear(l, id)),
+    }),
+    [update, findYear],
   );
 
   const collections = useMemo(
@@ -129,8 +157,32 @@ export default function App() {
     return filtered.sort(cmp[sort]);
   }, [inView, query, decade, suspectOnly, sort]);
 
-  const suspectCount = useMemo(() => inView.filter(isYearSuspect).length, [inView]);
+  const suspects = useMemo(() => inView.filter(isYearSuspect), [inView]);
+  const suspectCount = suspects.length;
+  const foundYears = useMemo(
+    () =>
+      suspects.flatMap((s) => {
+        const release = earlierRelease(s, yearLookups[s.id]);
+        return release ? [{ id: s.id, year: release.year }] : [];
+      }),
+    [suspects, yearLookups],
+  );
   const activeCollection = lib?.collections[view];
+
+  const duplicates = useMemo(() => (lib ? findDuplicates(lib) : []), [lib?.songs, lib?.ignoredDuplicates]);
+
+  async function findAllYears() {
+    const ids = suspects.filter((s) => yearLookups[s.id]?.state !== 'done').map((s) => s.id);
+    setFindingYears(true);
+    await pool(ids, 3, findYear);
+    setFindingYears(false);
+  }
+
+  function mergeGroup(keepId: string, group: Song[]) {
+    const ids = group.map((s) => s.id);
+    update((l) => mergeSongs(l, keepId, ids));
+    setSelected((prev) => new Set([...prev].filter((id) => id === keepId || !ids.includes(id))));
+  }
 
   function handleImported(result: ImportResult, target: ImportTarget) {
     update((l) => {
@@ -247,6 +299,14 @@ export default function App() {
             active={view === UNSORTED}
             onClick={() => setView(UNSORTED)}
           />
+          {duplicates.length > 0 && (
+            <SidebarItem
+              label="Duplicates"
+              count={duplicates.length}
+              active={view === DUPLICATES}
+              onClick={() => setView(DUPLICATES)}
+            />
+          )}
           <h3>Collections</h3>
           {collections.map((c) => (
             <SidebarItem
@@ -265,7 +325,15 @@ export default function App() {
 
       <main className="main">
         <div className="view-header">
-          <h2>{view === ALL ? 'All songs' : view === UNSORTED ? 'Not in a collection' : activeCollection?.name}</h2>
+          <h2>
+            {view === ALL
+              ? 'All songs'
+              : view === UNSORTED
+                ? 'Not in a collection'
+                : view === DUPLICATES
+                  ? 'Duplicates'
+                  : activeCollection?.name}
+          </h2>
           {activeCollection && (
             <>
               <button
@@ -304,103 +372,190 @@ export default function App() {
           />
         )}
 
-        <div className="toolbar">
-          <input
-            className="search"
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title, artist, album…"
+        {view === DUPLICATES ? (
+          <DuplicatesView
+            groups={duplicates}
+            collections={lib.collections}
+            onMerge={mergeGroup}
+            onIgnore={(group) => update((l) => ignoreDuplicates(l, group))}
           />
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            <option value="added">Recently added</option>
-            <option value="year">Year</option>
-            <option value="title">Title</option>
-            <option value="artist">Artist</option>
-          </select>
-          {suspectCount > 0 && (
-            <label className="inline" title="Songs whose Spotify year may be a remaster/compilation year">
-              <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />⚠ Check
-              year ({suspectCount})
-            </label>
-          )}
-        </div>
-
-        {decadeCounts.length > 0 && (
-          <div className="decades" title="Songs per decade — handy for a balanced timeline">
-            {decadeCounts.map(([d, n]) => (
-              <button
-                key={d}
-                className={`decade${decade === d ? ' active' : ''}`}
-                onClick={() => setDecade(decade === d ? null : d)}
-              >
-                <span>{String(d).slice(2)}s</span>
-                <b>{n}</b>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {selected.size > 0 && (
-          <div className="selection-bar">
-            <b>{selected.size} selected</b>
-            <select
-              value=""
-              onChange={(e) => {
-                const id = e.target.value;
-                if (id) update((l) => addToCollection(l, selected, id));
-              }}
-            >
-              <option value="">Add to collection…</option>
-              {collections.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+        ) : (
+          <>
             {activeCollection && (
-              <button
-                className="ghost"
-                onClick={() => {
-                  update((l) => removeFromCollection(l, selected, activeCollection.id));
-                  setSelected(new Set());
-                }}
-              >
-                Remove from "{activeCollection.name}"
-              </button>
+              <Readiness
+                songs={inView}
+                suspectCount={suspectCount}
+                decadeCounts={decadeCounts}
+                onShowSuspects={() => setSuspectOnly(true)}
+              />
             )}
-            <button
-              className="ghost danger"
-              onClick={() => {
-                if (!confirm(`Delete ${selected.size} songs from the library?`)) return;
-                update((l) => deleteSongs(l, selected));
-                setSelected(new Set());
-              }}
-            >
-              Delete from library
-            </button>
-            <div className="spacer" />
-            <button className="ghost" onClick={() => setSelected(new Set())}>
-              Clear selection
-            </button>
-          </div>
-        )}
 
-        <p className="muted count">
-          Showing {shown.length} of {inView.length} songs
-        </p>
-        <SongTable
-          songs={shown}
-          collections={lib.collections}
-          selected={selected}
-          resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort}`}
-          onToggle={toggle}
-          onToggleAll={toggleAll}
-          onSetYear={handleSetYear}
-        />
+            <div className="toolbar">
+              <input
+                className="search"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search title, artist, album…"
+              />
+              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+                <option value="added">Recently added</option>
+                <option value="year">Year</option>
+                <option value="title">Title</option>
+                <option value="artist">Artist</option>
+              </select>
+              {suspectCount > 0 && (
+                <label className="inline" title="Songs whose Spotify year may be a remaster/compilation year">
+                  <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />⚠ Check
+                  year ({suspectCount})
+                </label>
+              )}
+              {suspectCount > 0 && (
+                <button
+                  className="ghost small"
+                  disabled={!connected || findingYears}
+                  title="Search Spotify for the earliest release of every ⚠ song in this view"
+                  onClick={findAllYears}
+                >
+                  {findingYears ? 'Finding original years…' : '🔍 Find original years'}
+                </button>
+              )}
+              {foundYears.length > 0 && (
+                <button
+                  className="ghost small"
+                  title="Use the earliest release year found for each ⚠ song"
+                  onClick={() => update((l) => foundYears.reduce((acc, f) => setYear(acc, f.id, f.year), l))}
+                >
+                  Use found years ({foundYears.length})
+                </button>
+              )}
+            </div>
+
+            {decadeCounts.length > 0 && (
+              <div className="decades" title="Songs per decade — handy for a balanced timeline">
+                {decadeCounts.map(([d, n]) => (
+                  <button
+                    key={d}
+                    className={`decade${decade === d ? ' active' : ''}`}
+                    onClick={() => setDecade(decade === d ? null : d)}
+                  >
+                    <span>{String(d).slice(2)}s</span>
+                    <b>{n}</b>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selected.size > 0 && (
+              <div className="selection-bar">
+                <b>{selected.size} selected</b>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (id) update((l) => addToCollection(l, selected, id));
+                  }}
+                >
+                  <option value="">Add to collection…</option>
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {activeCollection && (
+                  <button
+                    className="ghost"
+                    onClick={() => {
+                      update((l) => removeFromCollection(l, selected, activeCollection.id));
+                      setSelected(new Set());
+                    }}
+                  >
+                    Remove from "{activeCollection.name}"
+                  </button>
+                )}
+                <button
+                  className="ghost danger"
+                  onClick={() => {
+                    if (!confirm(`Delete ${selected.size} songs from the library?`)) return;
+                    update((l) => deleteSongs(l, selected));
+                    setSelected(new Set());
+                  }}
+                >
+                  Delete from library
+                </button>
+                <div className="spacer" />
+                <button className="ghost" onClick={() => setSelected(new Set())}>
+                  Clear selection
+                </button>
+              </div>
+            )}
+
+            <p className="muted count">
+              Showing {shown.length} of {inView.length} songs
+            </p>
+            <SongTable
+              songs={shown}
+              collections={lib.collections}
+              selected={selected}
+              resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort}`}
+              yearLookups={yearLookups}
+              onToggle={toggle}
+              onToggleAll={toggleAll}
+              yearActions={yearActions}
+            />
+          </>
+        )}
       </main>
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </div>
+  );
+}
+
+// Below this a game runs out of songs quickly; above this share one decade crowds the timeline.
+const MIN_SONGS = 50;
+const MAX_DECADE_SHARE = 0.4;
+
+/** Whether a collection is ready to play: enough songs, checked years and a spread of decades. */
+function Readiness(props: {
+  songs: Song[];
+  suspectCount: number;
+  decadeCounts: [number, number][];
+  onShowSuspects: () => void;
+}) {
+  const { songs, suspectCount, decadeCounts } = props;
+  const withYear = decadeCounts.reduce((sum, [, n]) => sum + n, 0);
+  const [topDecade, topCount] = decadeCounts.reduce((top, d) => (d[1] > top[1] ? d : top), [0, 0]);
+  const issues: ReactNode[] = [];
+  if (songs.length < MIN_SONGS) issues.push(`only ${songs.length} songs (aim for ${MIN_SONGS}+)`);
+  if (suspectCount > 0) {
+    issues.push(
+      <button key="suspect" className="link" onClick={props.onShowSuspects}>
+        {suspectCount} years to check ⚠
+      </button>,
+    );
+  }
+  if (songs.length > withYear) issues.push(`${songs.length - withYear} songs without a year`);
+  if (decadeCounts.length < 3) issues.push(`only ${decadeCounts.length} decade${decadeCounts.length === 1 ? '' : 's'}`);
+  else if (topCount / withYear > MAX_DECADE_SHARE) {
+    issues.push(`${Math.round((topCount / withYear) * 100)}% from the ${String(topDecade).slice(2)}s`);
+  }
+  const span = decadeCounts.length
+    ? `${decadeCounts.length} decades, ${decadeCounts[0][0]}s–${decadeCounts[decadeCounts.length - 1][0]}s`
+    : 'no years';
+
+  return (
+    <div className={`readiness ${issues.length ? 'not-ready' : 'ready'}`}>
+      <b>{issues.length ? 'Not quite ready' : '✓ Ready to play'}</b>
+      <span className="muted">
+        {songs.length} songs · {span}
+      </span>
+      {issues.map((issue, i) => (
+        <span key={i} className="issue">
+          {issue}
+        </span>
+      ))}
     </div>
   );
 }

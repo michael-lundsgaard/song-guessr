@@ -9,6 +9,8 @@ export interface Song {
   spotifyYear: number | null;
   /** Manually corrected year (Spotify often reports the remaster/compilation year). */
   yearOverride?: number | null;
+  /** The user checked a ⚠ year and Spotify's year is right, so it is no longer flagged. */
+  yearConfirmed?: boolean;
   durationMs: number;
   imageUrl?: string;
   addedAt: number;
@@ -27,7 +29,9 @@ export interface Library {
   collections: Record<string, Collection>;
   /** Free-text search query (lowercased) -> matched track id, so searches are not repeated. */
   searchCache: Record<string, string>;
+  /** Duplicate groups the user marked as different songs (see duplicateGroupKey). */
+  ignoredDuplicates: string[];
 }
 
 /** Song metadata as fetched from Spotify, before it becomes part of the library. */
-export type SongData = Omit<Song, 'addedAt' | 'collectionIds' | 'yearOverride'>;
+export type SongData = Omit<Song, 'addedAt' | 'collectionIds' | 'yearOverride' | 'yearConfirmed'>;

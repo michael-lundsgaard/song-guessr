@@ -1,21 +1,40 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { isYearSuspect, songYear } from '../library';
 import type { Collection, Song } from '../types';
+import { earlierRelease, type YearLookup } from '../versions';
+
+export interface YearActions {
+  set: (id: string, year: number | null) => void;
+  /** Looks up the song's original release year on Spotify. */
+  find: (id: string) => void;
+  /** Accepts Spotify's year, clearing the ⚠ flag. */
+  confirm: (id: string) => void;
+}
 
 interface Props {
   songs: Song[];
   collections: Record<string, Collection>;
   selected: Set<string>;
+  yearLookups: Record<string, YearLookup>;
   /** Changes whenever the filters/sort change, so the table scrolls back to its first page. */
   resetKey: string;
   onToggle: (id: string) => void;
   onToggleAll: () => void;
-  onSetYear: (id: string, year: number | null) => void;
+  yearActions: YearActions;
 }
 
 const PAGE = 150;
 
-export function SongTable({ songs, collections, selected, resetKey, onToggle, onToggleAll, onSetYear }: Props) {
+export function SongTable({
+  songs,
+  collections,
+  selected,
+  yearLookups,
+  resetKey,
+  onToggle,
+  onToggleAll,
+  yearActions,
+}: Props) {
   // Render rows in pages as the user scrolls; mounting thousands of rows at once is what makes filtering slow.
   const [limit, setLimit] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -58,8 +77,9 @@ export function SongTable({ songs, collections, selected, resetKey, onToggle, on
               song={s}
               collections={collections}
               isSelected={selected.has(s.id)}
+              yearLookup={yearLookups[s.id]}
               onToggle={onToggle}
-              onSetYear={onSetYear}
+              yearActions={yearActions}
             />
           ))}
         </tbody>
@@ -73,12 +93,20 @@ interface RowProps {
   song: Song;
   collections: Record<string, Collection>;
   isSelected: boolean;
+  yearLookup?: YearLookup;
   onToggle: (id: string) => void;
-  onSetYear: (id: string, year: number | null) => void;
+  yearActions: YearActions;
 }
 
 // Memoized so editing one song or toggling one checkbox only re-renders that row.
-const SongRow = memo(function SongRow({ song: s, collections, isSelected, onToggle, onSetYear }: RowProps) {
+const SongRow = memo(function SongRow({
+  song: s,
+  collections,
+  isSelected,
+  yearLookup,
+  onToggle,
+  yearActions,
+}: RowProps) {
   return (
     <tr className={isSelected ? 'selected' : undefined}>
       <td className="check">
@@ -91,7 +119,7 @@ const SongRow = memo(function SongRow({ song: s, collections, isSelected, onTogg
       </td>
       <td className="muted album">{s.album}</td>
       <td className="year">
-        <YearCell song={s} onSetYear={onSetYear} />
+        <YearCell song={s} lookup={yearLookup} actions={yearActions} />
       </td>
       <td>
         {s.collectionIds
@@ -118,15 +146,15 @@ const SongRow = memo(function SongRow({ song: s, collections, isSelected, onTogg
   );
 });
 
-function YearCell({ song, onSetYear }: { song: Song; onSetYear: (id: string, year: number | null) => void }) {
+function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
   const year = songYear(song);
   const [draft, setDraft] = useState(year?.toString() ?? '');
   useEffect(() => setDraft(year?.toString() ?? ''), [year]);
 
   const commit = () => {
     const parsed = parseInt(draft, 10);
-    if (draft.trim() === '') onSetYear(song.id, null);
-    else if (parsed >= 1900 && parsed <= 2100) onSetYear(song.id, parsed);
+    if (draft.trim() === '') actions.set(song.id, null);
+    else if (parsed >= 1900 && parsed <= 2100) actions.set(song.id, parsed);
     else setDraft(year?.toString() ?? '');
   };
 
@@ -149,6 +177,43 @@ function YearCell({ song, onSetYear }: { song: Song; onSetYear: (id: string, yea
       />
       {suspect && <span className="flag">⚠</span>}
       {overridden && <span className="flag">✎</span>}
+      {suspect && <YearSuggestion song={song} lookup={lookup} actions={actions} />}
     </span>
+  );
+}
+
+function YearSuggestion({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
+  const earlier = earlierRelease(song, lookup);
+  return (
+    <>
+      {!lookup && (
+        <button className="mini" title="Find the original release year on Spotify" onClick={() => actions.find(song.id)}>
+          🔍
+        </button>
+      )}
+      {lookup?.state === 'loading' && <span className="muted">…</span>}
+      {lookup?.state === 'error' && (
+        <button className="mini danger" title={`${lookup.message}. Click to retry.`} onClick={() => actions.find(song.id)}>
+          !
+        </button>
+      )}
+      {earlier && (
+        <button
+          className="mini suggestion"
+          title={`Earliest release found: "${earlier.album}" (${earlier.year}). Click to use this year.`}
+          onClick={() => actions.set(song.id, earlier.year)}
+        >
+          → {earlier.year}
+        </button>
+      )}
+      {lookup?.state === 'done' && !earlier && (
+        <span className="muted" title="Spotify has no earlier release of this song">
+          none
+        </span>
+      )}
+      <button className="mini" title="Spotify's year is right — stop flagging it" onClick={() => actions.confirm(song.id)}>
+        ✓
+      </button>
+    </>
   );
 }

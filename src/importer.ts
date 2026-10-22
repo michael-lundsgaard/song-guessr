@@ -20,7 +20,8 @@ export interface ImportResult {
   failed: number;
 }
 
-async function pool<T>(items: T[], concurrency: number, fn: (item: T) => Promise<void>) {
+/** Runs fn over items with at most `concurrency` calls in flight. */
+export async function pool<T>(items: T[], concurrency: number, fn: (item: T) => Promise<void>) {
   let next = 0;
   const worker = async () => {
     while (next < items.length) await fn(items[next++]);

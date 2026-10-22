@@ -401,6 +401,58 @@ code {
   color: var(--info);
 }
 
+.songs .year-cell {
+  white-space: nowrap;
+}
+
+button.mini {
+  padding: 0 6px;
+  font-size: 12px;
+  background: transparent;
+  border-color: var(--border);
+}
+
+button.mini:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+button.mini.suggestion {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+button.link {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  text-decoration: underline;
+}
+
+.readiness {
+  display: flex;
+  align-items: center;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.readiness.ready {
+  border-left-color: var(--accent);
+}
+
+.readiness .issue {
+  color: var(--warn);
+}
+
+.duplicate .songs tr {
+  cursor: pointer;
+}
+
 .chip {
   display: inline-block;
   font-size: 11px;
