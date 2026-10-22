@@ -195,6 +195,8 @@ export function saveGame(game: Game | null) {
 
 export const loadRecent = () => readJson<string[]>(RECENT_KEY, []);
 
+/** Forgets which songs were played, so every song counts as fresh again. */
+export const forgetPlayed = () => localStorage.removeItem(RECENT_KEY);
 
 /** Remembers a played song, so the next games play it last. */
 export function markPlayed(songId: string) {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { eligibleSongs, loadLastSetup, type GameSetup as Setup, type Mode } from '../game';
+import { eligibleSongs, forgetPlayed, loadLastSetup, loadRecent, type GameSetup as Setup, type Mode } from '../game';
 import { decadeOf, isYearSuspect, songYear } from '../library';
 import type { Library } from '../types';
 
@@ -55,6 +55,11 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
 
   const songs = useMemo(() => eligibleSongs(lib, setup), [lib, setup]);
   const uncertain = songs.filter(isYearSuspect).length;
+  const [recent, setRecent] = useState(loadRecent);
+  const played = useMemo(() => {
+    const ids = new Set(recent);
+    return songs.filter((s) => ids.has(s.id)).length;
+  }, [songs, recent]);
   const teams = setup.teams.map((t) => t.trim()).filter(Boolean);
   const mode = MODES.find((m) => m.mode === setup.mode)!;
   const enough = songs.length >= teams.length * 2;
@@ -112,6 +117,22 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           {songs.length} songs in the deck
           {uncertain > 0 && ` · ${uncertain} with an uncertain year (shown as ≈ and judged leniently)`}
         </p>
+        {played > 0 && (
+          <p className="muted">
+            {played} of these were played in earlier games, so they come last: the next {songs.length - played} songs
+            are all new.{' '}
+            <button
+              className="link"
+              onClick={() => {
+                if (!confirm('Forget which songs were played? Every song counts as new again.')) return;
+                forgetPlayed();
+                setRecent([]);
+              }}
+            >
+              Forget played songs
+            </button>
+          </p>
+        )}
       </section>
 
       <section>

@@ -23,6 +23,8 @@ export function PlayPage({ lib, connected }: { lib: Library; connected: boolean 
             saveLastSetup(setup);
             const started = newGame(lib, setup, loadRecent());
             setGame(started);
+            // The face-up starting cards are seen too.
+            started.teams.forEach((t) => t.timeline.forEach(markPlayed));
             // Start the first song while still inside the click, which browsers require for audio.
             const first = started.round && lib.songs[started.round.songId];
             if (first) {
