@@ -9,8 +9,8 @@ test('setup: toggling options does not move the Start button', async ({ page }) 
   await page.getByText('Party').click();
   const start = page.getByRole('button', { name: 'Start game' });
   const before = await start.boundingBox();
-  await page.getByText(/Extra points/).click();
-  await page.getByText(/random start/).click();
+  await page.getByRole('checkbox', { name: /Extra points/ }).click();
+  await page.getByRole('checkbox', { name: /random start/ }).click();
   expect(await start.boundingBox()).toEqual(before);
   await page.screenshot(shot('setup'));
 });
@@ -127,4 +127,26 @@ test("who's singing: four artists, one right", async ({ page }) => {
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('.verdict')).toHaveCount(0);
   await expect(page.locator('.choice-button')).toHaveCount(4);
+});
+
+test('rules: shown for the chosen mode in setup, and in a dialog during the game', async ({ page }) => {
+  await seed(page, makeLibrary(), { 'sg.page': 'play' });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Closest year/ }).click();
+  await expect(page.locator('.rules summary')).toHaveText('Rules: Closest year');
+  await expect(page.locator('.rules-list li').first()).toContainText('Everyone plays every song');
+  await page.getByRole('button', { name: /^Timeline/ }).click();
+  await expect(page.locator('.rules summary')).toHaveText('Rules: Timeline');
+  await page.getByText('Party').click();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await page.locator('.slot').first().click();
+  await page.getByRole('button', { name: 'Rules', exact: true }).click();
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog).toContainText('Every team starts with one card');
+  await page.screenshot(shot('rules-dialog'));
+  // Enter closes the dialog but must not confirm the picked slot behind it.
+  await page.keyboard.press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.verdict')).toHaveCount(0);
+  await expect(page.locator('.slot.selected')).toHaveCount(1);
 });

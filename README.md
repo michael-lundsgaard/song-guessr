@@ -70,6 +70,8 @@ Open **Play** in the top bar, pick a game, the collections (and optionally decad
 - **Which decade?**: the team picks the decade from big buttons. Quick, and good for younger players.
 - **Who's singing?**: the team picks the artist from four choices drawn from the deck.
 
+Each mode has its **rules** on the setup screen, and a **Rules** button during the game shows them again.
+
 Keys: **space** play/pause, **R** replay, **Enter** reveal (Guess) or confirm placement (Timeline), **→** next song.
 
 A year shown as **≈ 1981** is still flagged ⚠ in the library: it may be a remaster or compilation year, so the real year can be earlier. In Timeline, such a card also counts as correct one slot earlier.

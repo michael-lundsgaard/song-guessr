@@ -48,6 +48,7 @@ Built, not yet played for real.
 - [ ] Timeline "steal": another team may place a card the current team got wrong.
 - [x] **Closest year**: everyone guesses the year; closest wins the point, and an exact year scores a bonus.
 - [x] **Which decade?** and **Who's singing?** (four artists to choose from): quick formats for younger players. A ≈ year also accepts the decade before.
+- [x] Rules for every mode: on the setup screen and in a dialog during the game, in English and Danish.
 - [ ] More ideas: a speed round (first team to buzz), "finish the lyric", a team-vs-team Timeline "steal".
 
 ## 6. Nice to have

@@ -18,6 +18,7 @@ import { decadeOf, isYearSuspect, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
 import { PlayerBar } from './PlayerBar';
+import { RulesDialog } from './Rules';
 
 interface Props {
   lib: Library;
@@ -41,6 +42,7 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
 
   // An answer picked but not yet confirmed: a timeline slot, a decade or an artist.
   const [pending, setPending] = useState<number | string | null>(null);
+  const [showRules, setShowRules] = useState(false);
   useEffect(() => setPending(null), [round?.songId]);
 
   function confirmPending() {
@@ -82,7 +84,8 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
   // Keyboard: space = play/pause, R = replay, Enter = reveal / confirm, → = next song.
   const keys = useRef<(e: KeyboardEvent) => void>();
   keys.current = (e) => {
-    if ((e.target as HTMLElement).closest('input, textarea, select')) return;
+    // Not while typing, and not while a dialog (rules, settings) is open.
+    if ((e.target as HTMLElement).closest('input, textarea, select') || document.querySelector('dialog[open]')) return;
     if (e.key === ' ') {
       e.preventDefault();
       if (isPlayingRound) void togglePlay();
@@ -167,10 +170,16 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
         ))}
         <div className="spacer" />
         <span className="muted">{t.progress(game.roundsPlayed + 1, game.deck.length, game.setup.target)}</span>
+        <button className="ghost small" onClick={() => setShowRules(true)}>
+          {t.rulesButton}
+        </button>
         <button className="ghost small" onClick={finish}>
           {t.endGame}
         </button>
       </div>
+      {showRules && (
+        <RulesDialog mode={mode} randomStart={game.setup.randomStart} onClose={() => setShowRules(false)} />
+      )}
 
       {song && round && (
         <div className="stage">

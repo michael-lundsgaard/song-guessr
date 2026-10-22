@@ -1322,3 +1322,33 @@ button.mini.big-icon {
   border-color: var(--danger);
   color: var(--danger);
 }
+
+/* Rules */
+
+.rules {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.rules summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.rules-list {
+  margin: 10px 0 6px;
+  padding-left: 20px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.rules-keys {
+  margin: 0;
+  font-size: 13px;
+}
+
+.dialog .rules-list {
+  font-size: 16px;
+}

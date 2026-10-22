@@ -3,6 +3,7 @@ import { eligibleSongs, forgetPlayed, loadLastSetup, loadRecent, type GameSetup 
 import { decadeOf, isYearSuspect, songYear } from '../library';
 import { useT } from '../i18n';
 import type { Library } from '../types';
+import { RulesList } from './Rules';
 
 const MODES: { mode: Mode; defaultTarget: number }[] = [
   { mode: 'timeline', defaultTarget: 10 },
@@ -75,6 +76,10 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
             </button>
           ))}
         </div>
+        <details className="rules" open>
+          <summary>{t.rulesTitle(t.modeNames[setup.mode])}</summary>
+          <RulesList mode={setup.mode} />
+        </details>
       </section>
 
       <section>

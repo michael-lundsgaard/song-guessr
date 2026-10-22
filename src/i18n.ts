@@ -293,6 +293,46 @@ const en = {
   playPauseKey: 'Play / pause (space)',
   placeHere: 'Place the song here',
   approxYearTitle: "Spotify's year; the original may be earlier",
+
+  // Rules
+  rulesButton: 'Rules',
+  rulesTitle: (mode: string) => `Rules: ${mode}`,
+  close: 'Close',
+  rules: {
+    timeline: [
+      'Every team starts with one card face up on its timeline.',
+      'On your turn a song plays. Where does it belong on your timeline: before, between or after your cards?',
+      'Pick the spot and confirm. If the year fits there, the card stays on your timeline. If not, it is out.',
+      'A song from the same year as a neighbouring card fits on either side of it.',
+      'A year marked ≈ may be the year of a reissue (the real one can be earlier), so the spot just before also counts.',
+      'The first team to reach the number of cards to win, wins.',
+      'With extra points: after the card is shown, the host gives +1 each for the exact year, the artist and the title. Extra points only decide a tie on cards.',
+    ],
+    guess: [
+      'On your turn a song plays. Say the title, the artist and the year out loud.',
+      'The host shows the card and gives +1 for each part you got right.',
+      'Agree before you start how close the year has to be (exact, or within a couple of years).',
+      'The first team to reach the points to win, wins.',
+    ],
+    closest: [
+      'Everyone plays every song: each team writes down its guess for the year.',
+      'The host types the guesses in and shows the card.',
+      'The team closest to the year gets 1 point; exactly right gets 2. If teams are equally close, they all score.',
+      'The first team to reach the points to win, wins.',
+    ],
+    decade: [
+      'On your turn a song plays. Pick the decade it is from, then confirm.',
+      'The right decade gives 1 point. For a year marked ≈, the decade before also counts.',
+      'The first team to reach the points to win, wins.',
+    ],
+    artist: [
+      'On your turn a song plays. Pick the artist from the four choices, then confirm.',
+      'The right artist gives 1 point.',
+      'The first team to reach the points to win, wins.',
+    ],
+  } satisfies Record<Mode, string[]>,
+  rulesKeys: 'Keys: space = play/pause, R = replay, Enter = show the card / confirm, → = next song.',
+  rulesRandomStart: 'Harder: random start plays each song from somewhere in the middle.',
 };
 
 export type Messages = typeof en;
@@ -569,6 +609,45 @@ const da: Messages = {
   playPauseKey: 'Afspil / pause (mellemrum)',
   placeHere: 'Placér sangen her',
   approxYearTitle: 'Spotifys år; originalen kan være ældre',
+
+  rulesButton: 'Regler',
+  rulesTitle: (mode) => `Regler: ${mode}`,
+  close: 'Luk',
+  rules: {
+    timeline: [
+      'Hvert hold starter med ét kort med billedsiden op på sin tidslinje.',
+      'Når det er jeres tur, spiller en sang. Hvor hører den til på jeres tidslinje: før, mellem eller efter jeres kort?',
+      'Vælg pladsen og bekræft. Passer året dér, bliver kortet liggende på tidslinjen. Ellers ryger det ud.',
+      'En sang fra samme år som et nabokort passer på begge sider af det.',
+      'Et år markeret med ≈ kan være året for en genudgivelse (det rigtige kan være tidligere), så pladsen lige før tæller også.',
+      'Det første hold, der når antallet af kort for at vinde, vinder.',
+      'Med ekstrapoint: når kortet er vist, giver værten +1 for hvert af: det præcise år, kunstneren og titlen. Ekstrapoint afgør kun uafgjort på kort.',
+    ],
+    guess: [
+      'Når det er jeres tur, spiller en sang. Sig titlen, kunstneren og året højt.',
+      'Værten viser kortet og giver +1 for hver del, I havde rigtigt.',
+      'Aftal før I starter, hvor tæt året skal være (præcist, eller inden for et par år).',
+      'Det første hold, der når pointene for at vinde, vinder.',
+    ],
+    closest: [
+      'Alle spiller med på hver sang: hvert hold skriver sit gæt på året ned.',
+      'Værten skriver gættene ind og viser kortet.',
+      'Holdet tættest på året får 1 point; præcis rigtigt giver 2. Er flere hold lige tæt på, scorer de alle.',
+      'Det første hold, der når pointene for at vinde, vinder.',
+    ],
+    decade: [
+      'Når det er jeres tur, spiller en sang. Vælg det årti, den er fra, og bekræft.',
+      'Det rigtige årti giver 1 point. For et år markeret med ≈ tæller årtiet før også.',
+      'Det første hold, der når pointene for at vinde, vinder.',
+    ],
+    artist: [
+      'Når det er jeres tur, spiller en sang. Vælg kunstneren blandt de fire muligheder, og bekræft.',
+      'Den rigtige kunstner giver 1 point.',
+      'Det første hold, der når pointene for at vinde, vinder.',
+    ],
+  },
+  rulesKeys: 'Taster: mellemrum = afspil/pause, R = afspil igen, Enter = vis kortet / bekræft, → = næste sang.',
+  rulesRandomStart: 'Sværere: tilfældig start spiller hver sang fra et sted i midten.',
 };
 
 const MESSAGES: Record<Lang, Messages> = { en, da };
