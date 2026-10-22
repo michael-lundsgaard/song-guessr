@@ -31,6 +31,7 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
       teams: last?.teams ?? ['Team 1', 'Team 2'],
       target: last?.target ?? 10,
       randomStart: last?.randomStart ?? false,
+      extraPoints: last?.extraPoints ?? false,
     };
   });
   const patch = (p: Partial<Setup>) => setSetup((s) => ({ ...s, ...p }));
@@ -145,7 +146,7 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
 
       <section className="setup-row">
         <label className="inline">
-          {mode.target}
+          {setup.mode === 'timeline' && setup.extraPoints ? 'Points to win (cards + extras)' : mode.target}
           <input
             type="number"
             min={1}
@@ -159,6 +160,16 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           <input type="checkbox" checked={setup.randomStart} onChange={(e) => patch({ randomStart: e.target.checked })} />
           Harder: random start
         </label>
+        {setup.mode === 'timeline' && (
+          <label className="inline" title="After each card, one extra point each for naming the exact year, the artist and the title">
+            <input
+              type="checkbox"
+              checked={!!setup.extraPoints}
+              onChange={(e) => patch({ extraPoints: e.target.checked })}
+            />
+            Extra points: exact year, artist, title
+          </label>
+        )}
         <div className="spacer" />
         <button
           className="primary big"

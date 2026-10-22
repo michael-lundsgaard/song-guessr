@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { endGame, markPlayed, nextTurn, place, reveal, toggleAward, type Game } from '../game';
 import { isYearSuspect, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
@@ -11,6 +11,13 @@ interface Props {
   onNewGame: () => void;
 }
 
+/** Award button labels: [Guess the song, Timeline extra points]. */
+const AWARD_LABELS = {
+  title: ['Title', 'Title'],
+  artist: ['Artist', 'Artist'],
+  year: ['Year', 'Exact year'],
+} as const;
+
 /** A ⚠ year may be a later remaster/compilation year: show it as approximate. */
 const yearLabel = (s: Song) => `${isYearSuspect(s) ? '≈ ' : ''}${songYear(s) ?? '?'}`;
 
@@ -20,6 +27,16 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
   const song = round ? lib.songs[round.songId] : null;
   const team = game.teams[game.turn];
   const isPlayingRound = !!song && player.current?.uri === song.uri;
+  const isTimeline = game.setup.mode === 'timeline';
+
+  // Timeline: the slot the team picked, placed only once they confirm.
+  const [pendingSlot, setPendingSlot] = useState<number | null>(null);
+  useEffect(() => setPendingSlot(null), [round?.songId]);
+  function confirmPlacement() {
+    if (pendingSlot == null) return;
+    onChange(place(game, lib, pendingSlot));
+    setPendingSlot(null);
+  }
 
   function playSong(s: Song) {
     void play(s, { randomStart: game.setup.randomStart });
@@ -51,9 +68,10 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
       else if (song) playSong(song);
     } else if (e.key === 'r' || e.key === 'R') {
       if (isPlayingRound) void replay();
-    } else if (e.key === 'Enter' && game.setup.mode === 'guess' && round && !round.revealed) {
+    } else if (e.key === 'Enter' && round && !round.revealed) {
       e.preventDefault();
-      onChange(reveal(game));
+      if (isTimeline) confirmPlacement();
+      else onChange(reveal(game));
     } else if (e.key === 'ArrowRight' && round?.revealed) {
       next();
     }
@@ -94,6 +112,7 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
           <div key={i} className={`team-score${i === game.turn ? ' current' : ''}`}>
             <span>{t.name}</span>
             <b>{t.score}</b>
+            {isTimeline && game.setup.extraPoints && <span className="muted small-note">{t.timeline.length} cards</span>}
           </div>
         ))}
         <div className="spacer" />
@@ -138,24 +157,31 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
             </button>
           )}
 
-          {game.setup.mode === 'guess' && round.awarded && (
+          {isTimeline && !round.revealed && (
+            <button className="primary big" disabled={pendingSlot == null} onClick={confirmPlacement}>
+              {pendingSlot == null ? 'Pick a spot on the timeline' : 'Confirm placement (Enter)'}
+            </button>
+          )}
+
+          {isTimeline && round.revealed && (
+            <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
+              {round.correct ? '✓ Correct! The card stays.' : `✗ Wrong. It was ${yearLabel(song)}.`}
+            </p>
+          )}
+
+          {round.awarded && (
             <div className="awards">
+              {isTimeline && <span className="muted">Extra points:</span>}
               {(['title', 'artist', 'year'] as const).map((field) => (
                 <button
                   key={field}
                   className={`award${round.awarded![field] ? ' on' : ''}`}
                   onClick={() => onChange(toggleAward(game, field))}
                 >
-                  {round.awarded![field] ? '✓' : '+1'} {field[0].toUpperCase() + field.slice(1)}
+                  {round.awarded![field] ? '✓' : '+1'} {AWARD_LABELS[field][isTimeline ? 1 : 0]}
                 </button>
               ))}
             </div>
-          )}
-
-          {game.setup.mode === 'timeline' && round.revealed && (
-            <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
-              {round.correct ? '✓ Correct! The card stays.' : `✗ Wrong. It was ${yearLabel(song)}.`}
-            </p>
           )}
 
           {round.revealed && (
@@ -166,13 +192,14 @@ export function GameScreen({ lib, game, onChange, onNewGame }: Props) {
         </div>
       )}
 
-      {game.setup.mode === 'timeline' && round && (
+      {isTimeline && round && (
         <Timeline
           lib={lib}
           ids={team.timeline}
           placing={!round.revealed}
+          selected={pendingSlot}
           highlight={round.revealed && round.correct ? round.songId : undefined}
-          onPlace={(index) => onChange(place(game, lib, index))}
+          onSelect={setPendingSlot}
         />
       )}
     </div>
@@ -196,13 +223,20 @@ function Timeline(props: {
   lib: Library;
   ids: string[];
   placing: boolean;
+  /** The slot picked but not yet confirmed. */
+  selected: number | null;
   highlight?: string;
-  onPlace: (index: number) => void;
+  onSelect: (index: number) => void;
 }) {
   const slot = (index: number) =>
     props.placing && (
-      <button key={`slot-${index}`} className="slot" onClick={() => props.onPlace(index)} title="Place the song here">
-        +
+      <button
+        key={`slot-${index}`}
+        className={`slot${props.selected === index ? ' selected' : ''}`}
+        onClick={() => props.onSelect(index)}
+        title="Place the song here"
+      >
+        {props.selected === index ? '?' : '+'}
       </button>
     );
   return (

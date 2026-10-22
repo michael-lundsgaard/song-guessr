@@ -951,3 +951,15 @@ input.narrow {
   font-size: 22px;
   line-height: 1.6;
 }
+
+.slot.selected {
+  flex-basis: 90px;
+  border-style: solid;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+}
+
+.small-note {
+  font-size: 12px;
+}

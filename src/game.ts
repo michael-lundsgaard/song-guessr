@@ -9,10 +9,12 @@ export interface GameSetup {
   /** Empty means every decade. */
   decades: number[];
   teams: string[];
-  /** Timeline: cards on the timeline to win. Guess: points to win. */
+  /** Timeline: cards (plus extra points) to win. Guess: points to win. */
   target: number;
   /** Start each song somewhere in the middle (harder). */
   randomStart: boolean;
+  /** Timeline: an extra point each for the exact year, the artist and the title. */
+  extraPoints?: boolean;
 }
 
 export interface Team {
@@ -121,7 +123,7 @@ export function reveal(game: Game): Game {
   return { ...game, round: { ...game.round, revealed: true, awarded: { title: false, artist: false, year: false } } };
 }
 
-/** Guess mode: toggles a point for the current team. */
+/** Toggles a point for the current team (Guess mode, or Timeline extra points). */
 export function toggleAward(game: Game, field: 'title' | 'artist' | 'year'): Game {
   const round = game.round;
   if (!round?.awarded) return game;
@@ -151,9 +153,10 @@ export function place(game: Game, lib: Library, index: number): Game {
   const teams = game.teams.map((t, i) => {
     if (i !== game.turn || !correct) return t;
     const timeline = [...t.timeline.slice(0, index), round.songId, ...t.timeline.slice(index)];
-    return { ...t, timeline, score: timeline.length };
+    return { ...t, timeline, score: t.score + 1 };
   });
-  return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct } };
+  const awarded = game.setup.extraPoints ? { title: false, artist: false, year: false } : undefined;
+  return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct, awarded } };
 }
 
 // --- Persistence (this browser only) ---
@@ -191,6 +194,7 @@ export function saveGame(game: Game | null) {
 }
 
 export const loadRecent = () => readJson<string[]>(RECENT_KEY, []);
+
 
 /** Remembers a played song, so the next games play it last. */
 export function markPlayed(songId: string) {
