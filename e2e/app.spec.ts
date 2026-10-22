@@ -95,3 +95,14 @@ test('liked songs: pinned first with a heart, and can be updated from Spotify', 
   await expect(page.locator('.view-header .source .muted').last()).toContainText(/Liked Songs|failed|Couldn't/i);
   await page.screenshot(shot('liked-songs'));
 });
+
+test('an older collection can be linked to its Spotify playlist', async ({ page }) => {
+  await seed(page, makeLibrary(), fakeLogin());
+  await page.goto('/');
+  await page.locator('.sidebar .nav-item', { hasText: 'Party' }).click();
+  page.once('dialog', (d) => d.accept('https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=abc'));
+  await page.getByRole('button', { name: /Link to Spotify/ }).click();
+  await expect(page.getByText('♫ From a Spotify playlist')).toBeVisible();
+  await expect(page.getByRole('button', { name: '↻ Update from Spotify' })).toBeVisible();
+  await expect(page.locator('.sidebar .nav-item', { hasText: 'Party' })).toContainText('♫');
+});

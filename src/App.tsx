@@ -6,6 +6,7 @@ import { PlayPage } from './components/PlayPage';
 import { SettingsDialog } from './components/SettingsDialog';
 import { SongTable, type Sort, type SortKey, type YearActions } from './components/SongTable';
 import { pool, runImport, type ImportResult } from './importer';
+import { parseImportText } from './parse';
 import {
   addToCollection,
   applyYearHints,
@@ -28,11 +29,11 @@ import {
   songYear,
   upsertSongs,
 } from './library';
-import { getPlayer, initBrowserPlayer, pause } from './player';
+import { initBrowserPlayer } from './player';
 import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
 import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
-import type { Collection, Library, Song } from './types';
+import type { Collection, CollectionSource, Library, Song } from './types';
 import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
 
 type SaveState = 'saved' | 'saving' | 'error';
@@ -55,8 +56,6 @@ export default function App() {
   const [showImport, setShowImport] = useState(true);
   const [page, setPageState] = useState<Page>(() => (localStorage.getItem(PAGE_KEY) === 'play' ? 'play' : 'library'));
   const setPage = (p: Page) => {
-    // Leaving a game: stop its song, so the library can't give it away.
-    if (p === 'library' && getPlayer().current?.secret && getPlayer().playing) void pause();
     localStorage.setItem(PAGE_KEY, p);
     setPageState(p);
   };
@@ -254,6 +253,21 @@ export default function App() {
     }
   }
 
+  /** Ties an older collection to the Spotify playlist, album or Liked Songs it came from. */
+  function linkSource(c: Collection) {
+    const text = prompt(t.linkSourcePrompt);
+    if (!text) return;
+    const item = parseImportText(text).items.find((i) => i.kind !== 'track');
+    const source: CollectionSource | null =
+      item?.kind === 'liked'
+        ? { kind: 'liked' }
+        : item && item.kind !== 'track'
+          ? { kind: item.kind, id: item.id }
+          : null;
+    if (!source) return alert(t.linkSourceInvalid);
+    update((l) => setCollectionSource(l, c.id, source));
+  }
+
   const toggle = useCallback(
     (id: string) =>
       setSelected((prev) => {
@@ -422,6 +436,11 @@ export default function App() {
                     {t.deleteCollection}
                   </button>
                 </>
+              )}
+              {activeCollection && !activeCollection.source && (
+                <button className="ghost small" title={t.linkSourceTitle} onClick={() => linkSource(activeCollection)}>
+                  {t.linkSource}
+                </button>
               )}
               {activeCollection?.source && (
                 <span className="source">

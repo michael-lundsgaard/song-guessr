@@ -69,6 +69,10 @@ const en = {
   syncButton: '↻ Update from Spotify',
   syncTitle: 'Fetch the list from Spotify again and add any new songs. Songs removed on Spotify stay here.',
   syncing: 'Updating…',
+  linkSource: '🔗 Link to Spotify',
+  linkSourceTitle: 'Tell the app which Spotify playlist or album this collection came from, so it can be updated from there',
+  linkSourcePrompt: 'Paste the link to the Spotify playlist or album (or type Liked Songs):',
+  linkSourceInvalid: "That isn't a link to a Spotify playlist or album.",
   syncDone: (n: number) => (n ? `Added ${n} new songs` : 'Up to date: no new songs'),
 
   // Readiness
@@ -409,6 +413,10 @@ const da: Messages = {
   syncButton: '↻ Opdatér fra Spotify',
   syncTitle: 'Henter listen fra Spotify igen og tilføjer nye sange. Sange, der er fjernet på Spotify, bliver her.',
   syncing: 'Opdaterer…',
+  linkSource: '🔗 Forbind til Spotify',
+  linkSourceTitle: 'Fortæl appen, hvilken Spotify-playliste eller -album samlingen kom fra, så den kan opdateres derfra',
+  linkSourcePrompt: 'Indsæt linket til Spotify-playlisten eller -albummet (eller skriv Liked Songs):',
+  linkSourceInvalid: 'Det er ikke et link til en Spotify-playliste eller et album.',
   syncDone: (n) => (n ? `Tilføjede ${n} nye sange` : 'Opdateret: ingen nye sange'),
 
   readyOk: '✓ Klar til at spille',

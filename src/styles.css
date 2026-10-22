@@ -911,12 +911,17 @@ input.narrow {
 
 .awards {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* The label gets its own line, so the three buttons always fit on one row below it. */
+.awards > span {
+  flex-basis: 100%;
 }
 
 .award {
-  font-size: 18px;
-  padding: 10px 20px;
+  font-size: 16px;
+  padding: 8px 16px;
   border: 2px solid var(--border);
   background: transparent;
 }

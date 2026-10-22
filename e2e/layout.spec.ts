@@ -52,3 +52,14 @@ test('a wrong timeline answer shows where the card was put and where it belongs'
   await expect(page.locator('.belongs-here')).toHaveCount(1);
   await page.screenshot(shot('timeline-miss'));
 });
+
+test('the three extra-point buttons sit on one row', async ({ page }) => {
+  const lib = makeLibrary();
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': makeTimelineGame(lib, 5) });
+  await page.goto('/');
+  await page.locator('.slot').first().click();
+  await page.keyboard.press('Enter');
+  const tops = await page.locator('.award').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+  expect(tops).toHaveLength(3);
+  expect(new Set(tops).size).toBe(1);
+});
