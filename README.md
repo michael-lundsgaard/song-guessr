@@ -62,18 +62,18 @@ When viewing a collection, a readiness line shows whether it's good to play: at 
 
 Open **Play** in the top bar, pick a game, the collections (and optionally decades), the teams and the target, then **Start game**. Pick "This browser" as the player so no other app shows the song title.
 
-- **Timeline** (Hitster rules): every team starts with one face-up card. The song plays, and the team whose turn it is clicks a **+** slot on their timeline. A correct guess keeps the card; first to the target number of cards wins.
+- **Timeline** (Hitster rules): every team starts with one face-up card. The song plays, and the team whose turn it is picks a **+** slot on their timeline and confirms it (**Confirm placement** or Enter). A correct guess keeps the card; first to the target number of cards wins. With **Extra points** on, the host can also give +1 each for the exact year, the artist and the title, and the target counts cards plus extras.
 - **Guess the song**: the song plays, **Reveal** shows the card, and the host clicks **+1 Title / Artist / Year** for each part the team got right.
 
-Keys: **space** play/pause, **R** replay, **Enter** reveal, **→** next song.
+Keys: **space** play/pause, **R** replay, **Enter** reveal (Guess) or confirm placement (Timeline), **→** next song.
 
 A year shown as **≈ 1981** is still flagged ⚠ in the library: it may be a remaster or compilation year, so the real year can be earlier. In Timeline, such a card also counts as correct one slot earlier.
 
-A game in progress survives a page reload. Songs played in recent games go to the back of the deck in the next ones.
+A game in progress survives a page reload. Songs played in earlier games (including the starting cards) go to the back of the deck, so back-to-back games get new songs until the deck runs out. Game setup shows how many songs are still new, and **Forget played songs** resets that.
 
 ## Storage
 
-Everything is saved to `data/library.json` by the dev server. The `data/` folder is git-ignored (the library is personal), so back it up yourself. The game in progress, the last game setup and the recently-played list are stored in the browser.
+The **Saved** indicator in the top bar is about the library: every change is saved automatically. Everything is saved to `data/library.json` by the dev server. The `data/` folder is git-ignored (the library is personal), so back it up yourself. The game in progress, the last game setup and the recently-played list are stored in the browser.
 
 ## Spotify Developer Policy
 

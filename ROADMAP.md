@@ -33,7 +33,7 @@ Built, not yet played for real.
 
 - [x] Navigation between **Library** and **Play** (top bar; remembers the last page).
 - [x] Game setup: mode, one or more collections, optional decade filter, teams, target (cards or points to win), "random start" harder mode. Remembers the last setup.
-- [x] Deck: shuffle with no repeats within a game; songs played in recent games (last 500, this browser) go to the back of the deck.
+- [x] Deck: shuffle with no repeats within a game; songs played in recent games (last 500, this browser, starting cards included) go to the back of the deck, so back-to-back games use new songs until the deck runs out. Setup shows how many are new and can forget the history.
 - [x] Big-screen layout: large card, scoreboard, keyboard shortcuts (space = play/pause, R = replay, Enter = reveal, → = next song).
 - [x] Persist an in-progress game (this browser), so a page reload resumes it.
 - [ ] Play a real game night and tune sizes, defaults and flow.
@@ -43,7 +43,9 @@ Built, not yet played for real.
 - [x] A revealed card shows a year that may be off (still ⚠: compilation or remaster year) as "≈ 1981". In Timeline, such a card also counts as correct one slot earlier, since the real year can only be earlier.
 - [x] **Guess the song**: play a song with the card hidden, then reveal title, artist and year; the host awards a point per correct part.
 - [x] **Timeline** (Hitster rules): each team starts with one face-up card; place the new song before, between or after the existing cards; a correct placement keeps the card; first to N cards wins.
-- [ ] Timeline extras: "steal" (another team may place a card the current team got wrong), and a bonus for also naming title and artist.
+- [x] Timeline: pick a slot, then confirm it (button or Enter), so a misclick can be changed.
+- [x] Timeline extra points (setup option): +1 each for the exact year, the artist and the title, whether or not the card was placed right. The target then counts cards + extras.
+- [ ] Timeline "steal": another team may place a card the current team got wrong.
 - [ ] **Closest year**: everyone guesses the year; closest wins the point, and an exact year scores a bonus.
 - [ ] **Decade round** or **artist speed round**: quick formats for younger players.
 
