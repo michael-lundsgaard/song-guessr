@@ -25,13 +25,17 @@ interface Props {
   connected: boolean;
   game: Game;
   onChange: (game: Game) => void;
+  /** A new game with the same teams and settings. */
+  onPlayAgain: () => void;
   onNewGame: () => void;
 }
+
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 /** A ⚠ year may be a later remaster/compilation year: show it as approximate. */
 const yearLabel = (s: Song) => `${isYearSuspect(s) ? '≈ ' : ''}${songYear(s) ?? '?'}`;
 
-export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props) {
+export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewGame }: Props) {
   const t = useT();
   const player = usePlayer();
   const round = game.round;
@@ -113,17 +117,24 @@ export function GameScreen({ lib, connected, game, onChange, onNewGame }: Props)
           <div className="trophy">🏆</div>
           <h2>{game.winner >= 0 ? t.wins(game.teams[game.winner].name) : t.draw}</h2>
           <ol className="final-scores">
-            {ranked.map((tm) => (
+            {ranked.map((tm, i) => (
               <li key={tm.name}>
-                {tm.name} <b>{tm.score}</b>
+                <span className="medal">{MEDALS[i] ?? `${i + 1}.`}</span>
+                <span className="final-name">{tm.name}</span>
+                <b>{tm.score}</b>
                 {game.setup.extraPoints && <span className="muted">{t.extraSuffix(tm.bonus ?? 0)}</span>}
               </li>
             ))}
           </ol>
           <p className="muted">{t.songsPlayed(game.roundsPlayed)}</p>
-          <button className="primary big" onClick={onNewGame}>
-            {t.newGame}
-          </button>
+          <div className="winner-actions">
+            <button className="primary big" onClick={onPlayAgain} title={t.playAgainTitle}>
+              {t.playAgain}
+            </button>
+            <button className="ghost big" onClick={onNewGame}>
+              {t.newGame}
+            </button>
+          </div>
         </div>
       </div>
     );

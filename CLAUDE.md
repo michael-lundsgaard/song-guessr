@@ -16,6 +16,8 @@ A home-made Hitster: a Spotify-backed song library (React + Vite, TypeScript) wi
 - `src/library.ts`: the `Library` type's pure update functions (each returns a new Library), plus persistence through the dev server.
 - `src/parse.ts` / `src/importer.ts`: paste import. `src/versions.ts`: original-year lookup.
 - `src/game.ts`: game rules as pure functions over a `Game` value, plus its localStorage persistence. UI in `src/components/PlayPage.tsx`, `GameSetup.tsx`, `GameScreen.tsx`. Game screens must never show the song before reveal (no `titleFor` on the `PlayerBar`).
+- `src/i18n.ts`: all UI text (English + Danish). `src/theme.ts`: light/dark/auto theme. `src/components/Rules.tsx`: per-mode rules (text in i18n).
+- `e2e/`: Playwright tests and fixtures (generated library, game states).
 - `vite.config.ts`: tiny backend that stores the library in `data/library.json` (git-ignored, personal data).
 
 ## Spotify constraints (development-mode app)

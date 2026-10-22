@@ -36,6 +36,9 @@ Built, not yet played for real.
 - [x] Deck: shuffle with no repeats within a game; songs played in recent games (last 500, this browser, starting cards included) go to the back of the deck, so back-to-back games use new songs until the deck runs out. Setup shows how many are new and can forget the history.
 - [x] Big-screen layout: large card, scoreboard, keyboard shortcuts (space = play/pause, R = replay, Enter = reveal, → = next song).
 - [x] Persist an in-progress game (this browser), so a page reload resumes it.
+- [x] Fixed-size cards; the timeline wraps onto rows (tested with 30 cards); main buttons in a bar fixed to the bottom.
+- [x] English / Danish and light / dark / auto theme in the top bar.
+- [x] Winner screen with medals and **Play again** (same teams and settings, fresh songs).
 - [ ] Play a real game night and tune sizes, defaults and flow.
 
 ## 5. Game modes

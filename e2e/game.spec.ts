@@ -150,3 +150,25 @@ test('rules: shown for the chosen mode in setup, and in a dialog during the game
   await expect(page.locator('.verdict')).toHaveCount(0);
   await expect(page.locator('.slot.selected')).toHaveCount(1);
 });
+
+test('winner: play again starts a new game with the same teams and fresh songs', async ({ page }) => {
+  const lib = makeLibrary();
+  // One card short of winning, so one right placement ends the game.
+  const game = makeTimelineGame(lib, 3, { target: 4 });
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': game });
+  await page.goto('/');
+  // Place the card in a spot that is always right: find it by year.
+  const year = lib.songs[game.round!.songId].spotifyYear!;
+  const years = game.teams[0].timeline.map((id) => lib.songs[id].spotifyYear!);
+  const index = years.filter((y) => y <= year).length;
+  await page.locator('.slot').nth(index).click();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.verdict')).toContainText('Correct');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('heading', { name: 'The Hitmakers wins!' })).toBeVisible();
+  await page.screenshot(shot('winner'));
+  await page.getByRole('button', { name: 'Play again' }).click();
+  await expect(page.locator('.team-score')).toHaveCount(2);
+  await expect(page.locator('.team-score').first()).toContainText('The Hitmakers');
+  await expect(page.locator('.team-score b').first()).toHaveText('1');
+});

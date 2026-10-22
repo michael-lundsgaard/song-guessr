@@ -1014,8 +1014,24 @@ input.narrow {
 }
 
 .final-scores {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
   font-size: 22px;
-  line-height: 1.6;
+}
+
+.final-scores li {
+  display: grid;
+  grid-template-columns: 2em minmax(8em, auto) 2.5em auto;
+  align-items: baseline;
+  gap: 10px;
+  text-align: left;
+}
+
+.final-scores li b {
+  text-align: right;
 }
 
 .slot.selected {
@@ -1351,4 +1367,35 @@ button.mini.big-icon {
 
 .dialog .rules-list {
   font-size: 16px;
+}
+
+.winner-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.trophy {
+  animation: pop 0.6s ease-out;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.3) rotate(-12deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15) rotate(4deg);
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trophy {
+    animation: none;
+  }
 }
