@@ -101,13 +101,32 @@ function buildDeck(songs: Song[], recent: string[]): string[] {
 
 const mainArtist = (s: Song) => s.artists[0] ?? '';
 
-/** Four artists to choose from: the right one and three others from the deck, shuffled. */
+const nameWords = (name: string) => ` ${name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+
+/** Same act or close enough to confuse: one name's words appear in the other's ("Axwell" / "Axwell /\ Ingrosso"). */
+function namesClash(a: string, b: string): boolean {
+  const wa = nameWords(a);
+  const wb = nameWords(b);
+  return wa.includes(wb) || wb.includes(wa);
+}
+
+/**
+ * Four artists to choose from: the right one and three others from the deck, shuffled.
+ * Only one option is credited on the song: the others never clash with any of its artists, or with each other.
+ */
 function artistOptionsFor(songs: Song[]): Record<string, string[]> {
   const artists = [...new Set(songs.map(mainArtist))];
   return Object.fromEntries(
     songs.map((s) => {
-      const others = shuffle(artists.filter((a) => a !== mainArtist(s))).slice(0, 3);
-      return [s.id, shuffle([mainArtist(s), ...others])];
+      const picked = [mainArtist(s)];
+      const taken = [...s.artists];
+      for (const a of shuffle(artists)) {
+        if (picked.length === 4) break;
+        if (taken.some((t) => namesClash(a, t))) continue;
+        picked.push(a);
+        taken.push(a);
+      }
+      return [s.id, shuffle(picked)];
     }),
   );
 }

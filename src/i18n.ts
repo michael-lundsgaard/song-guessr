@@ -345,6 +345,7 @@ const en = {
     artist: [
       'On your turn a song plays. Pick the artist from the four choices, then confirm.',
       'The right artist gives 1 point.',
+      'If a song is credited to several artists, only one of them is among the choices. That one is the answer.',
       'The first team to reach the points to win, wins.',
     ],
   } satisfies Record<Mode, string[]>,
@@ -676,6 +677,7 @@ const da: Messages = {
     artist: [
       'Når det er jeres tur, spiller en sang. Vælg kunstneren blandt de fire muligheder, og bekræft.',
       'Den rigtige kunstner giver 1 point.',
+      'Står flere kunstnere på sangen, er kun én af dem med blandt valgmulighederne. Det er den, der gælder.',
       'Det første hold, der når pointene for at vinde, vinder.',
     ],
   },

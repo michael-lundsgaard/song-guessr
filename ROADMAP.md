@@ -50,7 +50,7 @@ Built, not yet played for real.
 - [x] Timeline extra points (setup option): +1 each for the exact year, the artist and the title, only when the card was placed right. They only break a tie on cards.
 - [ ] Timeline "steal": another team may place a card the current team got wrong.
 - [x] **Closest year**: everyone guesses the year; closest wins the point, and an exact year scores a bonus.
-- [x] **Which decade?** and **Who's singing?** (four artists to choose from): quick formats for younger players. A ≈ year also accepts the decade before.
+- [x] **Which decade?** and **Who's singing?** (four artists to choose from): quick formats for younger players. A ≈ year also accepts the decade before. Who's singing uses the first credited artist; the wrong choices never include another credited artist or a near-identical name (Macklemore / Macklemore & Ryan Lewis), so exactly one option is credited on the song (also in the rules).
 - [x] Rules for every mode: on the setup screen and in a dialog during the game, in English and Danish.
 - [ ] More ideas: a speed round (first team to buzz), "finish the lyric", a team-vs-team Timeline "steal".
 
