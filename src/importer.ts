@@ -1,5 +1,5 @@
 import type { ImportItem } from './parse';
-import { fetchAlbum, fetchLikedSongs, fetchPlaylist, fetchTrack, searchTrack, SpotifyError } from './spotify';
+import { fetchAlbum, fetchLikedSongs, fetchPlaylist, fetchTrack, SpotifyError } from './spotify';
 import type { Library, SongData } from './types';
 
 export interface LogEntry {
@@ -15,7 +15,6 @@ export interface ImportResult {
   /** One group per playlist/album, used to create a collection per playlist. */
   groups: { name: string; songIds: string[] }[];
   yearHints: Record<string, number>;
-  searchCache: Record<string, string>;
   log: LogEntry[];
   failed: number;
 }
@@ -51,9 +50,7 @@ function describe(e: unknown, kind: string) {
   return e instanceof Error ? e.message : String(e);
 }
 
-const label = (d: SongData) => `${d.artists.join(', ')} – ${d.title} (${d.spotifyYear ?? '?'})`;
-
-/** Resolves import items to songs. Tracks and searches already in the library are not fetched again. */
+/** Resolves import items to songs. Tracks already in the library are not fetched again. */
 export async function runImport(
   items: ImportItem[],
   lib: Library,
@@ -61,7 +58,7 @@ export async function runImport(
 ): Promise<ImportResult> {
   const fetched = new Map<string, SongData>();
   const songIds = new Set<string>();
-  const result: ImportResult = { fetched: [], songIds: [], groups: [], yearHints: {}, searchCache: {}, log: [], failed: 0 };
+  const result: ImportResult = { fetched: [], songIds: [], groups: [], yearHints: {}, log: [], failed: 0 };
   const log = (level: LogEntry['level'], text: string) => result.log.push({ level, text });
   const record = (d: SongData, yearHint?: number) => {
     fetched.set(d.id, d);
@@ -91,50 +88,28 @@ export async function runImport(
     }
   }
 
-  const singles = items.filter(
-    (i): i is Exclude<ImportItem, { kind: 'liked' }> => i.kind === 'track' || i.kind === 'search',
-  );
+  const tracks = items.filter((i): i is Exclude<ImportItem, { kind: 'liked' }> => i.kind === 'track');
   let done = 0;
   let reused = 0;
-  await pool(singles, 4, async (item) => {
+  await pool(tracks, 4, async (item) => {
     try {
-      if (item.kind === 'track') {
-        if (lib.songs[item.id]) {
-          songIds.add(item.id);
-          if (item.yearHint) result.yearHints[item.id] = item.yearHint;
-          reused++;
-        } else {
-          const d = await fetchTrack(item.id);
-          if (d) record(d, item.yearHint);
-          else {
-            result.failed++;
-            log('warn', `Track ${item.id} is not playable on Spotify`);
-          }
-        }
-      } else if (item.kind === 'search') {
-        const key = item.query.toLowerCase();
-        const cachedId = lib.searchCache[key];
-        if (cachedId && lib.songs[cachedId]) {
-          songIds.add(cachedId);
-          if (item.yearHint) result.yearHints[cachedId] = item.yearHint;
-          reused++;
-        } else {
-          const d = await searchTrack(item.query);
-          if (d) {
-            record(d, item.yearHint);
-            result.searchCache[key] = d.id;
-            log('info', `"${item.query}" → ${label(d)}`);
-          } else {
-            result.failed++;
-            log('warn', `No match for "${item.query}"`);
-          }
+      if (lib.songs[item.id]) {
+        songIds.add(item.id);
+        if (item.yearHint) result.yearHints[item.id] = item.yearHint;
+        reused++;
+      } else {
+        const d = await fetchTrack(item.id);
+        if (d) record(d, item.yearHint);
+        else {
+          result.failed++;
+          log('warn', `Track ${item.id} is not playable on Spotify`);
         }
       }
     } catch (e) {
       result.failed++;
-      log('error', `${item.kind === 'search' ? `"${item.query}"` : `Track ${item.id}`}: ${describe(e, item.kind)}`);
+      log('error', `Track ${item.id}: ${describe(e, item.kind)}`);
     }
-    onProgress(`Looking up songs… ${++done}/${singles.length}`);
+    onProgress(`Looking up songs… ${++done}/${tracks.length}`);
   });
   if (reused) log('ok', `${reused} songs were already in the library (not fetched again)`);
 

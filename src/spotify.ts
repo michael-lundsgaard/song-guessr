@@ -294,11 +294,6 @@ export async function fetchAlbum(id: string): Promise<TrackList> {
   return { name: album.name, tracks, skipped: 0 };
 }
 
-export async function searchTrack(query: string): Promise<SongData | null> {
-  const params = new URLSearchParams({ q: query, type: 'track', limit: '1' });
-  const res = await apiGet<{ tracks: Paging<SpTrack> }>(`/search?${params}`);
-  return toSongData(res.tracks.items[0]);
-}
 
 /** Up to `max` search results, fetched 10 at a time (the page size Spotify allows development-mode apps). */
 export async function searchTracks(query: string, max = 30): Promise<SongData[]> {

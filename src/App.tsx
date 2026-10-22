@@ -188,7 +188,6 @@ export default function App() {
     update((l) => {
       let next = upsertSongs(l, result.fetched);
       next = applyYearHints(next, result.yearHints);
-      next = { ...next, searchCache: { ...next.searchCache, ...result.searchCache } };
       let collectionId = target.collectionId;
       if (target.newCollectionName) [next, collectionId] = ensureCollection(next, target.newCollectionName);
       if (collectionId) next = addToCollection(next, result.songIds, collectionId);

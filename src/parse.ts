@@ -1,7 +1,10 @@
-export type ImportItem =
-  | { kind: 'track' | 'playlist' | 'album'; id: string; yearHint?: number }
-  | { kind: 'search'; query: string; yearHint?: number }
-  | { kind: 'liked' };
+export type ImportItem = { kind: 'track' | 'playlist' | 'album'; id: string; yearHint?: number } | { kind: 'liked' };
+
+export interface ParsedImport {
+  items: ImportItem[];
+  /** Lines with no Spotify link on them (free text is searched in the Search tab instead). */
+  unrecognised: number;
+}
 
 /** What the Liked Songs link looks like when copied from Spotify; also inserted by the import button. */
 export const LIKED_SONGS_LINK = 'https://open.spotify.com/collection/tracks';
@@ -12,13 +15,13 @@ const LINK_RE =
 const YEAR_RE = /[([]\s*((?:19|20)\d{2})\s*[)\]]/;
 
 /**
- * One item per line. Accepts Spotify links/URIs (tracks, playlists, albums — several per line is fine)
- * or free text like "1. Queen - Bohemian Rhapsody (1975)", which becomes a search.
- * A "(1975)" on the line is kept as the song's year.
+ * One item per line: Spotify links/URIs for tracks, playlists and albums (several per line is fine).
+ * A "(1975)" on a line with a single link is kept as that song's year.
  */
-export function parseImportText(text: string): ImportItem[] {
+export function parseImportText(text: string): ParsedImport {
   const items: ImportItem[] = [];
   const seen = new Set<string>();
+  let unrecognised = 0;
   const push = (key: string, item: ImportItem) => {
     if (seen.has(key)) return;
     seen.add(key);
@@ -32,27 +35,19 @@ export function parseImportText(text: string): ImportItem[] {
       push('liked', { kind: 'liked' });
       continue;
     }
-    const yearMatch = line.match(YEAR_RE);
-    const yearHint = yearMatch ? Number(yearMatch[1]) : undefined;
-
     const links = [...line.matchAll(LINK_RE)];
-    if (links.length) {
-      for (const [, kind, id] of links) {
-        push(`${kind}:${id}`, {
-          kind: kind as 'track' | 'playlist' | 'album',
-          id,
-          yearHint: links.length === 1 ? yearHint : undefined,
-        });
-      }
+    if (!links.length) {
+      unrecognised++;
       continue;
     }
-
-    const query = (yearMatch ? line.replace(yearMatch[0], ' ') : line)
-      .replace(/^\d+[.)]\s+/, '')
-      .replace(/\s[-–—]\s/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (query) push(`search:${query.toLowerCase()}`, { kind: 'search', query, yearHint });
+    const yearMatch = line.match(YEAR_RE);
+    for (const [, kind, id] of links) {
+      push(`${kind}:${id}`, {
+        kind: kind as 'track' | 'playlist' | 'album',
+        id,
+        yearHint: links.length === 1 && yearMatch ? Number(yearMatch[1]) : undefined,
+      });
+    }
   }
-  return items;
+  return { items, unrecognised };
 }

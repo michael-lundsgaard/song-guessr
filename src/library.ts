@@ -4,7 +4,6 @@ export const emptyLibrary = (): Library => ({
   version: 1,
   songs: {},
   collections: {},
-  searchCache: {},
   ignoredDuplicates: [],
 });
 
@@ -16,7 +15,10 @@ export async function loadLibrary(): Promise<Library> {
   const res = await fetch('/api/library');
   if (!res.ok) throw new Error(`Could not load library (${res.status})`);
   const json = await res.json();
-  return json ? { ...emptyLibrary(), ...json } : emptyLibrary();
+  if (!json) return emptyLibrary();
+  // searchCache belonged to the removed free-text import.
+  const { searchCache: _, ...stored } = json;
+  return { ...emptyLibrary(), ...stored };
 }
 
 export async function saveLibrary(lib: Library): Promise<void> {
@@ -140,7 +142,7 @@ export const confirmYear = (lib: Library, id: string) =>
 
 /**
  * Keeps one version of a song and deletes the others. The kept song gets every collection of the group
- * and the group's earliest year, and searches that found a deleted version now point to the kept one.
+ * and the group's earliest year.
  */
 export function mergeSongs(lib: Library, keepId: string, ids: string[]): Library {
   const keep = lib.songs[keepId];
@@ -156,11 +158,7 @@ export function mergeSongs(lib: Library, keepId: string, ids: string[]): Library
     addedAt: Math.min(...group.map((g) => g.addedAt)),
   }));
   if (earliest != null && earliest < (songYear(keep) ?? Infinity)) next = setYear(next, keepId, earliest);
-  const removed = new Set(others.map((s) => s.id));
-  const searchCache = Object.fromEntries(
-    Object.entries(next.searchCache).map(([q, id]) => [q, removed.has(id) ? keepId : id]),
-  );
-  return { ...next, searchCache };
+  return next;
 }
 
 export const ignoreDuplicates = (lib: Library, group: Song[]): Library => ({

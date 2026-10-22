@@ -27,8 +27,6 @@ export interface Library {
   version: 1;
   songs: Record<string, Song>;
   collections: Record<string, Collection>;
-  /** Free-text search query (lowercased) -> matched track id, so searches are not repeated. */
-  searchCache: Record<string, string>;
   /** Duplicate groups the user marked as different songs (see duplicateGroupKey). */
   ignoredDuplicates: string[];
 }
