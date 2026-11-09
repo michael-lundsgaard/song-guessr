@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   answer,
   compareTeams,
@@ -32,6 +32,9 @@ interface Props {
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
+/** Next ignores clicks and → this long after the reveal, so a double click on Confirm can't skip the answer. */
+const NEXT_GUARD_MS = 800;
+
 /** A ⚠ year may be a later remaster/compilation year: show it as approximate. */
 const yearLabel = (s: Song) => `${isYearSuspect(s) ? '≈ ' : ''}${songYear(s) ?? '?'}`;
 
@@ -48,6 +51,17 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
   const [pending, setPending] = useState<number | string | null>(null);
   const [showRules, setShowRules] = useState(false);
   useEffect(() => setPending(null), [round?.songId]);
+
+  // Next stays disabled for a moment after each reveal.
+  // A layout effect, so it is disabled before the browser paints the revealed card.
+  const revealed = !!round?.revealed;
+  const [nextReady, setNextReady] = useState(true);
+  useLayoutEffect(() => {
+    if (!revealed) return;
+    setNextReady(false);
+    const timer = setTimeout(() => setNextReady(true), NEXT_GUARD_MS);
+    return () => clearTimeout(timer);
+  }, [revealed, round?.songId]);
 
   function confirmPending() {
     if (pending == null) return;
@@ -71,6 +85,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
   }
 
   function next() {
+    if (!nextReady) return;
     const updated = nextTurn(game);
     onChange(updated);
     // Still inside the click/key event, so the browser lets the next song start right away.
@@ -143,7 +158,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
   const pickLabel = mode === 'timeline' ? t.pickSpot : t.pickAnswer;
   const confirmLabel = mode === 'timeline' ? t.confirmPlacement : t.confirmAnswer;
   const mainAction = !round ? null : round.revealed ? (
-    <button className="primary big" onClick={next}>
+    <button className="primary big" disabled={!nextReady} onClick={next}>
       {t.nextSong}
     </button>
   ) : mode === 'guess' || mode === 'closest' ? (

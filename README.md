@@ -74,6 +74,8 @@ Open **Play** in the top bar, pick a game, the collections (and optionally decad
 
 Each mode has its **rules** on the setup screen, and a **Rules** button during the game shows them again.
 
+**Next song** waits a moment after the card is revealed, so a double click on Confirm can't skip the reveal.
+
 Keys: **space** play/pause, **R** replay, **Enter** reveal (Guess) or confirm placement (Timeline), **→** next song.
 
 A year shown as **≈ 1981** is still flagged ⚠ in the library: it may be a remaster or compilation year, so the real year can be earlier. In Timeline, such a card also counts as correct one slot earlier.

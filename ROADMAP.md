@@ -39,7 +39,7 @@ Built, not yet played for real.
 - [x] Fixed-size cards; the timeline wraps onto rows (tested with 30 cards); main buttons in a bar fixed to the bottom.
 - [x] English / Danish and light / dark / auto theme in the top bar.
 - [x] Winner screen with medals and **Play again** (same teams and settings, fresh songs).
-- [ ] Play a real game night and tune sizes, defaults and flow.
+- [x] Play a real game night and tune sizes, defaults and flow. First one played (October 2026); findings are in section 7.
 
 ## 5. Game modes
 
@@ -58,4 +58,26 @@ Built, not yet played for real.
 
 - [ ] Printable cards with QR codes (Hitster style) for playing away from the PC.
 - [ ] Per-song stats: times played, how often it was guessed right; use them to flag songs that are too easy or too hard. Move storage to SQLite at this point, since play history is append-heavy and query-shaped. The JSON file is fine until then (1.2k songs ≈ 0.7 MB).
-- [ ] Export and import a collection as a file to share with other families.
+- [ ] Export and import a collection as a file to share with other families. Not needed for now: the family has tablets, not laptops that can run the app.
+
+## 7. After the first game night
+
+In priority order.
+
+- [x] **Guard on Next.** In Timeline, Decade and Artist the Confirm button becomes Next in the same spot, so a double click skipped the reveal (and the chance to give extra points). Next (button and →) now ignores input for 0.8 s after the reveal.
+- [ ] *Maybe later:* **Undo**, if the guard turns out not to be enough. Tried and dropped (2026-11-09): stepping back through every click, or back to the start of a face-down card, was more confusing than useful. If it comes back, it should take the game back to the previous card **already revealed**, so the host can move it to another spot on the timeline (re-scored) and change the extra points; the new song goes back on top of the deck. Game state only; a year fixed during the game stays fixed.
+- [ ] **Dispute and fix year during the game.** On the revealed card:
+  - **Overrule**: the host flips the verdict to right or wrong for this round only; the data is unchanged.
+  - **Fix year**: the host types the real year; it is saved as the song's year override and the round is re-scored with the same answer.
+- [ ] **Equal turns, but only when they can matter.** When a team reaches the target, the game continues until the end of that round only if a team that hasn't had its turn yet could still tie (its score + the most it can win in one turn ≥ the leader's). Otherwise it ends at once (A on 10 and B on 6 ends the game). After equal turns, a tie on points goes to extra points, then a sudden-death round (one more song each until someone leads). Closest year is unaffected (everyone answers every round).
+- [ ] **Timer, visual only.** Setup option (off / 30 / 45 / 60 s). A ring counts down from when the song starts; at zero it turns red and keeps counting (+5, +12…) so the team knows to hurry. It never stops anything; the host decides.
+- [ ] **Better original years: test MusicBrainz first.** Example: "Never Gonna Give You Up - 2022 Remaster" is in the library as 2022 (≈, but one slot of leniency doesn't help when it's 35 years off); about 220 songs still have an uncertain year.
+  - First try the API by hand on a handful of songs (well-known, Danish, remasters, compilations) and compare with the real years before building anything.
+  - Tested (2026-11-09, 21 songs; the "real" years are from memory, not checked): 15 matched exactly, 6 were 1 year off, none missing. It fixed all six big errors: Rick Astley 2022→1987, Laid Back *Sunshine Reggae* 2008→1982, Charlie Daniels Band 1988→1979, Daft Punk *One More Time* 2006→2000, Culture Club 1989→1983, Madonna 1985→1984. Two of them were already marked ✓, so confirmed songs need a check too. Danish acts were all found (Volbeat, Lukas Graham, D-A-D, Dizzy Mizz Lizzy, Rocazino, Laid Back, Safri Duo).
+  - What worked: a recording search on the title without version suffixes + artist; keep exact title and artist matches; skip live/remix/edit versions; take the **earliest** first-release year (the most common year is useless: compilations dominate).
+  - Two requests out of 21 were refused at one request every 1.1 s, so the lookup needs a retry with backoff.
+  - MusicBrainz is open (no key), allows ~1 request/s and wants an app name in the User-Agent, so calls would go through the dev server backend.
+  - Possible approach: match on ISRC first, then title + artist search; accept only artist matches; offer as a one-click suggestion; in bulk, accept automatically only when it agrees with the Spotify lookup.
+  - Plus a setup option to leave out songs whose year is still uncertain.
+- [ ] **Sound when the board is on the TV.** Casting the Chrome tab to a Chromecast also sends its audio, and the re-encoding makes it sound poor through the soundbar. To test first: cast the whole screen instead, with the PC's sound on Bluetooth. Option to discuss later: a separate "TV view" window (board only, no controls, no audio) to cast, while the main tab plays to the speaker. Spotify Connect straight to a TV Chromecast would show the title on screen, and a phone scanning a song QR would show it in the Spotify app.
+- [ ] *Staged:* phones as controllers (join by QR, send answers). It needs the dev server reachable on the home network, which goes beyond localhost-only; decide before building.

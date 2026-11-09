@@ -74,6 +74,22 @@ test('a game in progress survives a reload', async ({ page }) => {
   await expect(page.locator('.verdict')).toBeVisible();
 });
 
+test('timeline: a double click on Confirm does not skip the reveal', async ({ page }) => {
+  const lib = makeLibrary();
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': makeTimelineGame(lib, 5) });
+  await page.goto('/');
+  await page.locator('.slot').nth(2).click();
+  await page.getByRole('button', { name: /Confirm placement/ }).dblclick();
+  await expect(page.locator('.verdict')).toBeVisible();
+  // The second click and → land on Next while it is still guarded.
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.verdict')).toBeVisible();
+  const next = page.getByRole('button', { name: /Next song/ });
+  await expect(next).toBeEnabled();
+  await next.click();
+  await expect(page.locator('.verdict')).toHaveCount(0);
+});
+
 async function startGame(page: import('@playwright/test').Page, mode: RegExp) {
   await page.goto('/');
   await page.getByRole('button', { name: mode }).click();
@@ -124,6 +140,7 @@ test("who's singing: four artists, one right", async ({ page }) => {
   await expect(page.locator('.verdict')).toBeVisible();
   await expect(page.locator('.choice-button.right')).toHaveCount(1);
   await page.screenshot(shot('artist-revealed'));
+  await expect(page.getByRole('button', { name: /Next song/ })).toBeEnabled();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('.verdict')).toHaveCount(0);
   await expect(page.locator('.choice-button')).toHaveCount(4);
@@ -164,6 +181,7 @@ test('winner: play again starts a new game with the same teams and fresh songs',
   await page.locator('.slot').nth(index).click();
   await page.keyboard.press('Enter');
   await expect(page.locator('.verdict')).toContainText('Correct');
+  await expect(page.getByRole('button', { name: /Next song/ })).toBeEnabled();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('heading', { name: 'The Hitmakers wins!' })).toBeVisible();
   await page.screenshot(shot('winner'));
