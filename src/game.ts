@@ -42,6 +42,10 @@ export interface Round {
   pick?: number | string;
   /** Who's singing: the artists to choose from. */
   options?: string[];
+  /** The host flipped the verdict. */
+  overruled?: boolean;
+  /** The teams as they were before this round was scored, so a disputed round can be scored again. */
+  before?: Team[];
 }
 
 export interface Game {
@@ -218,15 +222,71 @@ export function place(game: Game, lib: Library, index: number): Game {
   // Where the card belongs: the picked spot if it fits, else the first spot that does.
   const rightAt = fits(index) ? index : [...Array(team.timeline.length + 1).keys()].find(fits)!;
   const correct = fits(index) || (isYearSuspect(song) && index < team.timeline.length && fits(index + 1));
-  const teams = game.teams.map((t, i) => {
+  return settle(game, { ...round, placedAt: index, rightAt }, correct);
+}
+
+/**
+ * Shows the card and scores the current team's answer on top of the scores before this round
+ * (kept in round.before, so a disputed round can be scored again).
+ * Timeline: a correct card joins the timeline where it belongs, so the timeline stays in order
+ * (a card accepted one spot early, or overruled, included).
+ */
+function settle(game: Game, round: Round, correct: boolean): Game {
+  const before = round.before ?? game.teams;
+  const isTimeline = game.setup.mode === 'timeline';
+  const teams = before.map((t, i) => {
     if (i !== game.turn || !correct) return t;
-    // A card accepted one spot early still goes where it belongs, so the timeline stays in order.
-    const timeline = [...t.timeline.slice(0, rightAt), round.songId, ...t.timeline.slice(rightAt)];
-    return { ...t, timeline, score: t.score + 1 };
+    if (!isTimeline) return { ...t, score: t.score + 1 };
+    const at = round.rightAt!;
+    return { ...t, timeline: [...t.timeline.slice(0, at), round.songId, ...t.timeline.slice(at)], score: t.score + 1 };
   });
-  // Extra points only for a card placed right.
-  const awarded = game.setup.extraPoints && correct ? { title: false, artist: false, year: false } : undefined;
-  return { ...game, teams, round: { ...round, revealed: true, placedAt: index, correct, rightAt, awarded } };
+  // Timeline extra points only for a card placed right.
+  const awarded =
+    isTimeline && game.setup.extraPoints && correct ? { title: false, artist: false, year: false } : undefined;
+  return { ...game, teams, round: { ...round, revealed: true, correct, awarded, before } };
+}
+
+/** Rounds the host can overrule: those with a right / wrong verdict for the current team. */
+export const canOverrule = (game: Game) =>
+  !!game.round?.revealed && !!game.round.before && ['timeline', 'decade', 'artist'].includes(game.setup.mode);
+
+/** The host flips the verdict of this round (and back again). Only the score changes, not the song's data. */
+export function overrule(game: Game): Game {
+  const round = game.round;
+  if (!round || !canOverrule(game)) return game;
+  const settled = settle(game, round, !round.correct);
+  return { ...settled, round: { ...settled.round!, overruled: !round.overruled } };
+}
+
+/**
+ * Scores the revealed round again with the same answer, after the host fixed the song's year (`lib` has the new
+ * year). An overrule is dropped; extra points already given stay if the answer is still right.
+ */
+export function rescore(game: Game, lib: Library): Game {
+  const round = game.round;
+  if (!round?.revealed || !round.before) return game;
+  const base: Game = { ...game, teams: round.before, round: { songId: round.songId, revealed: false } };
+  let scored: Game;
+  switch (game.setup.mode) {
+    case 'timeline':
+      scored = place(base, lib, round.placedAt!);
+      break;
+    case 'decade':
+    case 'artist':
+      scored = answer({ ...base, round: { ...base.round!, options: round.options } }, lib, round.pick!);
+      break;
+    case 'closest':
+      scored = revealClosest({ ...base, round: { ...base.round!, guesses: round.guesses } }, lib);
+      break;
+    default:
+      return game;
+  }
+  if (round.awarded && scored.round?.awarded) {
+    scored = { ...scored, round: { ...scored.round, awarded: round.awarded } };
+    const given = Object.values(round.awarded).filter(Boolean).length;
+    scored.teams = scored.teams.map((t, i) => (i === game.turn ? { ...t, bonus: (t.bonus ?? 0) + given } : t));
+  }
+  return scored;
 }
 
 /** Closest year: records one team's guess (null clears it). */
@@ -246,7 +306,7 @@ export function revealClosest(game: Game, lib: Library): Game {
   const best = Math.min(...distances);
   const points = distances.map((d) => (d === Infinity || d !== best ? 0 : d === 0 ? 2 : 1));
   const teams = game.teams.map((t, i) => ({ ...t, score: t.score + points[i] }));
-  return { ...game, teams, round: { ...round, revealed: true, points } };
+  return { ...game, teams, round: { ...round, revealed: true, points, before: game.teams } };
 }
 
 /**
@@ -262,8 +322,7 @@ export function answer(game: Game, lib: Library, pick: number | string): Game {
     game.setup.mode === 'artist'
       ? pick === mainArtist(song)
       : pick === decade || (isYearSuspect(song) && pick === decade! - 10);
-  const teams = game.teams.map((t, i) => (i === game.turn && correct ? { ...t, score: t.score + 1 } : t));
-  return { ...game, teams, round: { ...round, revealed: true, pick, correct } };
+  return settle(game, { ...round, pick }, correct);
 }
 
 // --- Persistence (this browser only) ---

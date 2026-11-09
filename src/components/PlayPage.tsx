@@ -16,7 +16,15 @@ import { GameScreen } from './GameScreen';
 import { GameSetup } from './GameSetup';
 
 /** Game setup, or the game in progress (kept in this browser, so a reload resumes it). */
-export function PlayPage({ lib, connected }: { lib: Library; connected: boolean }) {
+export function PlayPage({
+  lib,
+  connected,
+  onLibChange,
+}: {
+  lib: Library;
+  connected: boolean;
+  onLibChange: (fn: (l: Library) => Library) => void;
+}) {
   const t = useT();
   const [game, setGame] = useState<Game | null>(() => loadGame(lib));
   useEffect(() => saveGame(game), [game]);
@@ -44,6 +52,7 @@ export function PlayPage({ lib, connected }: { lib: Library; connected: boolean 
           connected={connected}
           game={game}
           onChange={setGame}
+          onLibChange={onLibChange}
           onPlayAgain={() => start(game.setup)}
           onNewGame={() => setGame(null)}
         />

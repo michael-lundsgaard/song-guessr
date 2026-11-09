@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import fs from 'node:fs';
 import { fakeLogin, makeLibrary, makeTimelineGame, seed } from './fixtures';
 
 const shot = (name: string) => ({ path: `e2e/.results/screens/${name}.png`, fullPage: true });
@@ -200,4 +201,53 @@ test('going to the library during a game never names the game song', async ({ pa
   await expect(bar).toContainText('Game song (hidden)');
   // No row shows a pause button (that would point at the playing song).
   await expect(page.locator('.songs .play', { hasText: '❚❚' })).toHaveCount(0);
+});
+
+test('timeline: the host can overrule a verdict, and change it back', async ({ page }) => {
+  const lib = makeLibrary();
+  const game = makeTimelineGame(lib, 5);
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': game });
+  await page.goto('/');
+  // The song (1966) belongs after every card (1960–1963), so the first spot is wrong.
+  await page.locator('.slot').first().click();
+  await page.keyboard.press('Enter');
+  const verdict = page.locator('.verdict');
+  const score = page.locator('.team-score b').first();
+  await expect(verdict).toContainText('Wrong');
+  await expect(score).toHaveText('5');
+  await page.getByRole('button', { name: 'Count it as right' }).click();
+  await expect(verdict).toContainText("Correct! The card stays. (host's call)");
+  await expect(score).toHaveText('6');
+  await expect(page.locator('.mini-card')).toHaveCount(6);
+  await expect(page.locator('.award')).toHaveCount(3);
+  await page.screenshot(shot('timeline-overruled'));
+  await page.getByRole('button', { name: 'Count it as wrong' }).click();
+  await expect(verdict).toContainText('Wrong');
+  await expect(verdict).not.toContainText("host's call");
+  await expect(score).toHaveText('5');
+  await expect(page.locator('.mini-card.misplaced')).toHaveCount(1);
+});
+
+test('timeline: fixing the year saves it on the song and scores the round again', async ({ page }) => {
+  const lib = makeLibrary();
+  const game = makeTimelineGame(lib, 5);
+  const songId = game.round!.songId;
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': game });
+  await page.goto('/');
+  await page.locator('.slot').first().click();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.verdict')).toContainText('Wrong');
+  await page.getByRole('button', { name: 'Fix year' }).click();
+  const input = page.getByRole('textbox', { name: 'Fix year' });
+  await expect(input).toHaveValue('1966');
+  await input.fill('1955');
+  await page.screenshot(shot('timeline-fix-year'));
+  await input.press('Enter');
+  await expect(page.locator('.verdict')).toContainText('Correct');
+  await expect(page.locator('.team-score b').first()).toHaveText('6');
+  await expect(page.locator('.card-year')).toHaveText('1955');
+  // Saved to the library file (debounced).
+  await expect
+    .poll(() => JSON.parse(fs.readFileSync('e2e/.data/library.json', 'utf8')).songs[songId].yearOverride)
+    .toBe(1955);
 });

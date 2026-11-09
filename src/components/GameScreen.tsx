@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   answer,
+  canOverrule,
   compareTeams,
   endGame,
   isTurnBased,
   markPlayed,
   nextTurn,
+  overrule,
   place,
+  rescore,
   reveal,
   revealClosest,
   setGuess,
@@ -14,7 +17,7 @@ import {
   type Game,
 } from '../game';
 import { useT } from '../i18n';
-import { decadeOf, isYearSuspect, songYear } from '../library';
+import { decadeOf, isYearSuspect, setCheckedYear, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
 import { PlayerBar } from './PlayerBar';
@@ -25,6 +28,7 @@ interface Props {
   connected: boolean;
   game: Game;
   onChange: (game: Game) => void;
+  onLibChange: (fn: (l: Library) => Library) => void;
   /** A new game with the same teams and settings. */
   onPlayAgain: () => void;
   onNewGame: () => void;
@@ -38,7 +42,7 @@ const NEXT_GUARD_MS = 800;
 /** A ⚠ year may be a later remaster/compilation year: show it as approximate. */
 const yearLabel = (s: Song) => `${isYearSuspect(s) ? '≈ ' : ''}${songYear(s) ?? '?'}`;
 
-export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewGame }: Props) {
+export function GameScreen({ lib, connected, game, onChange, onLibChange, onPlayAgain, onNewGame }: Props) {
   const t = useT();
   const player = usePlayer();
   const round = game.round;
@@ -92,6 +96,13 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
     const nextSong = updated.round && lib.songs[updated.round.songId];
     if (nextSong) playSong(nextSong);
     else void pause();
+  }
+
+  /** The host's real year for the revealed song: saved on the song, and the round is scored again with it. */
+  function fixYear(year: number) {
+    if (!song) return;
+    onLibChange((l) => setCheckedYear(l, song.id, year));
+    onChange(rescore(game, setCheckedYear(lib, song.id, year)));
   }
 
   function finish() {
@@ -232,6 +243,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
             {mode === 'timeline' && round.revealed && (
               <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
                 {round.correct ? t.correct : t.wrong(yearLabel(song))}
+                {round.overruled && <span className="overruled"> {t.overruled}</span>}
               </p>
             )}
 
@@ -257,6 +269,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
             {mode === 'decade' && round.revealed && (
               <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
                 {round.correct ? t.correctAnswer : t.wrongDecade(t.decade(songDecade!))}
+                {round.overruled && <span className="overruled"> {t.overruled}</span>}
               </p>
             )}
 
@@ -273,6 +286,7 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
             {mode === 'artist' && round.revealed && (
               <p className={`verdict ${round.correct ? 'right' : 'wrong'}`}>
                 {round.correct ? t.correctAnswer : t.wrongArtist(song.artists[0] ?? '?')}
+                {round.overruled && <span className="overruled"> {t.overruled}</span>}
               </p>
             )}
 
@@ -296,6 +310,16 @@ export function GameScreen({ lib, connected, game, onChange, onPlayAgain, onNewG
                   </button>
                 ))}
               </div>
+            )}
+
+            {round.revealed && (
+              <Dispute
+                key={round.songId}
+                song={song}
+                correct={canOverrule(game) ? !!round.correct : null}
+                onOverrule={() => onChange(overrule(game))}
+                onFixYear={fixYear}
+              />
             )}
           </div>
         </div>
@@ -351,6 +375,74 @@ function RevealedCard({ song }: { song: Song }) {
       </div>
       <div className="card-title">{song.title}</div>
       <div className="card-artist">{song.artists.join(', ')}</div>
+    </div>
+  );
+}
+
+/**
+ * The host's tools on a revealed card: overrule the verdict (this round only), or fix the song's year
+ * (saved on the song, and the round is scored again).
+ */
+function Dispute(props: {
+  song: Song;
+  /** The verdict, or null when the round has none to overrule. */
+  correct: boolean | null;
+  onOverrule: () => void;
+  onFixYear: (year: number) => void;
+}) {
+  const t = useT();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState('');
+  const year = Number(text);
+  const valid = text.length === 4 && year >= 1900 && year <= new Date().getFullYear();
+
+  function save() {
+    if (!valid) return;
+    props.onFixYear(year);
+    setEditing(false);
+  }
+
+  return (
+    <div className="dispute">
+      {props.correct != null && (
+        <button className="ghost small" title={t.overruleTitle} onClick={props.onOverrule}>
+          {props.correct ? t.overruleWrong : t.overruleRight}
+        </button>
+      )}
+      {editing ? (
+        <>
+          <input
+            className="year-fix-input"
+            inputMode="numeric"
+            autoFocus
+            placeholder={t.yearPlaceholder}
+            aria-label={t.fixYear}
+            value={text}
+            onChange={(e) => setText(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') save();
+              else if (e.key === 'Escape') setEditing(false);
+            }}
+          />
+          <button className="small" disabled={!valid} onClick={save}>
+            {t.save}
+          </button>
+          <button className="ghost small" onClick={() => setEditing(false)}>
+            {t.cancel}
+          </button>
+        </>
+      ) : (
+        <button
+          className="ghost small"
+          title={t.fixYearTitle}
+          onClick={() => {
+            setText(String(songYear(props.song) ?? ''));
+            setEditing(true);
+          }}
+        >
+          {t.fixYear}
+        </button>
+      )}
     </div>
   );
 }

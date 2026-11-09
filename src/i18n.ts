@@ -316,6 +316,12 @@ const en = {
   yourPlacement: 'Where you placed it',
   belongsHere: 'It goes here',
   approxYearTitle: "Spotify's year; the original may be earlier",
+  overruleRight: 'Count it as right',
+  overruleWrong: 'Count it as wrong',
+  overruleTitle: 'Overrule the verdict for this round only. The song is not changed.',
+  overruled: "(host's call)",
+  fixYear: 'Fix year',
+  fixYearTitle: 'Save the real year on the song and score this round again',
 
   // Rules
   rulesButton: 'Rules',
@@ -655,6 +661,12 @@ const da: Messages = {
   yourPlacement: 'Hvor I placerede den',
   belongsHere: 'Den hører til her',
   approxYearTitle: 'Spotifys år; originalen kan være ældre',
+  overruleRight: 'Tæl det som rigtigt',
+  overruleWrong: 'Tæl det som forkert',
+  overruleTitle: 'Omgør dommen kun i denne runde. Sangen bliver ikke ændret.',
+  overruled: '(værtens afgørelse)',
+  fixYear: 'Ret året',
+  fixYearTitle: 'Gem det rigtige år på sangen, og regn runden ud igen',
 
   rulesButton: 'Regler',
   rulesTitle: (mode) => `Regler: ${mode}`,

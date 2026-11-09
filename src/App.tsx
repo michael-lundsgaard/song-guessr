@@ -614,7 +614,7 @@ export default function App() {
           </main>
         </>
       ) : (
-        <PlayPage lib={lib} connected={connected} />
+        <PlayPage lib={lib} connected={connected} onLibChange={update} />
       )}
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />

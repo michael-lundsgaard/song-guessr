@@ -950,6 +950,24 @@ input.narrow {
   color: var(--danger);
 }
 
+.verdict .overruled {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* The host's overrule / fix-year tools: small and quiet, below the answer. */
+.dispute {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-fix-input {
+  width: 5em;
+}
+
 .timeline {
   display: flex;
   flex-wrap: wrap;

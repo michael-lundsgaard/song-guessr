@@ -142,6 +142,9 @@ export function setYear(lib: Library, id: string, year: number | null): Library 
 /** Marks Spotify's year as right, so the song is no longer flagged ⚠. */
 export const confirmYear = (lib: Library, id: string) => mapSongs(lib, [id], (s) => ({ ...s, yearConfirmed: true }));
 
+/** A year the host checked during a game: stored on the song, which is then no longer flagged ⚠. */
+export const setCheckedYear = (lib: Library, id: string, year: number) => confirmYear(setYear(lib, id, year), id);
+
 /**
  * Keeps one version of a song and deletes the others. The kept song gets every collection of the group
  * and the group's earliest year.
