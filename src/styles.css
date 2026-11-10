@@ -950,6 +950,13 @@ input.narrow {
   color: var(--danger);
 }
 
+/* The last round, or sudden death: tells the room the game is about to end. */
+.final-note {
+  margin: 0;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 .verdict .overruled {
   font-size: 16px;
   font-weight: 400;

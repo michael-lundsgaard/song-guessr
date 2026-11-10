@@ -62,6 +62,8 @@ export interface Game {
   decadeChoices?: number[];
   /** Who's singing: the answer options for every song in the deck, made when the game starts. */
   artistOptions?: Record<string, string[]>;
+  /** Sudden death: the tied teams (indexes, in turn order) that play one more song each until one leads. */
+  suddenDeath?: number[];
 }
 
 /** Modes where the team whose turn it is answers alone (in Closest year everyone answers). */
@@ -171,17 +173,49 @@ function startRound(game: Game): Game {
 /** Ranks by score, then by extra points (the tiebreaker). */
 export const compareTeams = (a: Team, b: Team) => b.score - a.score || (b.bonus ?? 0) - (a.bonus ?? 0);
 
+/** Indexes of the teams ranked first (more than one on a tie), among `among` (default: every team). */
+function leadersOf(teams: Team[], among = teams.map((_, i) => i)): number[] {
+  const best = among.map((i) => teams[i]).sort(compareTeams)[0];
+  return among.filter((i) => compareTeams(teams[i], best) === 0);
+}
+
 function finish(game: Game): Game {
-  const best = [...game.teams].sort(compareTeams)[0];
-  const leaders = game.teams.flatMap((t, i) => (compareTeams(t, best) === 0 ? [i] : []));
+  const leaders = leadersOf(game.teams);
   return { ...game, round: null, winner: leaders.length === 1 ? leaders[0] : -1 };
 }
 
-/** Moves to the next team's turn, or ends the game when someone reached the target or the deck is empty. */
+/** The most a team can score in one turn (Guess: title, artist and year). */
+const maxTurnPoints = (mode: Mode) => (mode === 'guess' ? 3 : 1);
+
+/** Whether a team reached the target, so the game is in its last round (or in sudden death). */
+export const isFinalRound = (game: Game) => !!game.suddenDeath || game.teams.some((t) => t.score >= game.setup.target);
+
+/**
+ * Moves to the next team's turn, or ends the game.
+ * Closest year ends as soon as a team reaches the target (everyone answers every song).
+ * Turn-based modes play on to the end of the round when a team reaches the target, but only the teams that haven't
+ * had their turn yet and could still draw level with the leader. A tie after that goes to extra points, then to
+ * sudden death: the tied teams play one more song each until one leads.
+ */
 export function nextTurn(game: Game): Game {
-  const next = { ...game, roundsPlayed: game.roundsPlayed + 1, turn: (game.turn + 1) % game.teams.length };
-  if (game.teams.some((t) => t.score >= game.setup.target)) return finish(next);
-  return startRound(next);
+  const played = { ...game, roundsPlayed: game.roundsPlayed + 1 };
+  if (!isTurnBased(game.setup.mode)) {
+    if (isFinalRound(game)) return finish(played);
+    return startRound({ ...played, turn: (game.turn + 1) % game.teams.length });
+  }
+  // Rounds go in team order, so the teams after this one haven't had their turn in this round.
+  const playing = game.suddenDeath ?? game.teams.map((_, i) => i);
+  const waiting = playing.slice(playing.indexOf(game.turn) + 1);
+  if (isFinalRound(game)) {
+    // Only teams that could still draw level play; the others' turns can't change the result.
+    const best = Math.max(...playing.map((i) => game.teams[i].score));
+    const next = waiting.find((i) => game.teams[i].score + maxTurnPoints(game.setup.mode) >= best);
+    if (next != null) return startRound({ ...played, turn: next });
+    const leaders = leadersOf(game.teams, playing);
+    if (leaders.length === 1) return finish(played);
+    return startRound({ ...played, suddenDeath: leaders, turn: leaders[0] });
+  }
+  return startRound({ ...played, turn: waiting[0] ?? playing[0] });
 }
 
 export const endGame = (game: Game) => finish(game);

@@ -1,5 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import fs from 'node:fs';
+import type { Game } from '../src/game';
+import type { Library } from '../src/types';
 import { fakeLogin, makeLibrary, makeTimelineGame, seed } from './fixtures';
 
 const shot = (name: string) => ({ path: `e2e/.results/screens/${name}.png`, fullPage: true });
@@ -169,27 +171,64 @@ test('rules: shown for the chosen mode in setup, and in a dialog during the game
   await expect(page.locator('.slot.selected')).toHaveCount(1);
 });
 
-test('winner: play again starts a new game with the same teams and fresh songs', async ({ page }) => {
+/** Places the song in a spot that is always right (or, with `wrong`, the first spot, which the fixture makes wrong). */
+async function placeCard(page: Page, lib: Library, game: Game, team: number, songId: string, wrong = false) {
+  const year = lib.songs[songId].spotifyYear!;
+  const years = game.teams[team].timeline.map((id) => lib.songs[id].spotifyYear!);
+  if (wrong) expect(years[0]).toBeLessThan(year);
+  await page
+    .locator('.slot')
+    .nth(wrong ? 0 : years.filter((y) => y <= year).length)
+    .click();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.verdict')).toContainText(wrong ? 'Wrong' : 'Correct');
+  await expect(page.getByRole('button', { name: /Next song/ })).toBeEnabled();
+  await page.keyboard.press('ArrowRight');
+}
+
+test('winner: the round is played out, then play again starts a new game', async ({ page }) => {
   const lib = makeLibrary();
-  // One card short of winning, so one right placement ends the game.
+  // Both teams one card short of winning (Team 2 has 3 cards): Team 2 still gets its turn.
   const game = makeTimelineGame(lib, 3, { target: 4 });
   await seed(page, lib, { 'sg.page': 'play', 'sg.game': game });
   await page.goto('/');
-  // Place the card in a spot that is always right: find it by year.
-  const year = lib.songs[game.round!.songId].spotifyYear!;
-  const years = game.teams[0].timeline.map((id) => lib.songs[id].spotifyYear!);
-  const index = years.filter((y) => y <= year).length;
-  await page.locator('.slot').nth(index).click();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('.verdict')).toContainText('Correct');
-  await expect(page.getByRole('button', { name: /Next song/ })).toBeEnabled();
-  await page.keyboard.press('ArrowRight');
+  await placeCard(page, lib, game, 0, game.round!.songId);
+  await expect(page.getByText("Team 2's turn")).toBeVisible();
+  await expect(page.locator('.final-note')).toHaveText(
+    'The Hitmakers reached the target. The round is played to the end.',
+  );
+  await page.screenshot(shot('final-round'));
+  await placeCard(page, lib, game, 1, game.deck[0], true);
   await expect(page.getByRole('heading', { name: 'The Hitmakers wins!' })).toBeVisible();
   await page.screenshot(shot('winner'));
   await page.getByRole('button', { name: 'Play again' }).click();
   await expect(page.locator('.team-score')).toHaveCount(2);
   await expect(page.locator('.team-score').first()).toContainText('The Hitmakers');
   await expect(page.locator('.team-score b').first()).toHaveText('1');
+});
+
+test('winner: a team that cannot draw level gets no last turn', async ({ page }) => {
+  const lib = makeLibrary();
+  // Team 2 has 3 cards; at a target of 5 it can't catch up once The Hitmakers reach 5.
+  const game = makeTimelineGame(lib, 4, { target: 5 });
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': game });
+  await page.goto('/');
+  await placeCard(page, lib, game, 0, game.round!.songId);
+  await expect(page.getByRole('heading', { name: 'The Hitmakers wins!' })).toBeVisible();
+});
+
+test('a tie after the last round goes to sudden death', async ({ page }) => {
+  const lib = makeLibrary();
+  const game = makeTimelineGame(lib, 3, { target: 4, extraPoints: false });
+  for (const team of game.teams) team.bonus = 0;
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': game });
+  await page.goto('/');
+  await placeCard(page, lib, game, 0, game.round!.songId);
+  await placeCard(page, lib, game, 1, game.deck[0]);
+  await expect(page.locator('.final-note')).toHaveText('Sudden death: one more song each until a team leads.');
+  await expect(page.getByText("The Hitmakers' turn")).toBeVisible();
+  await expect(page.locator('.team-score b')).toHaveText(['4', '4']);
+  await page.screenshot(shot('sudden-death'));
 });
 
 test('going to the library during a game never names the game song', async ({ page }) => {

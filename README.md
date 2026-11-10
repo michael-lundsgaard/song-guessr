@@ -72,6 +72,8 @@ Open **Play** in the top bar, pick a game, the collections (and optionally decad
 - **Which decade?**: the team picks the decade from big buttons. Quick, and good for younger players.
 - **Who's singing?**: the team picks the artist from four choices drawn from the deck.
 
+**Equal turns:** in every mode but Closest year, the game doesn't stop the moment a team reaches the target. The teams that haven't had their turn in that round still play, but only those that could still draw level (Timeline, Which decade?, Who's singing?: 1 behind; Guess the song: 3 behind). When none can, the game ends. A tie then goes to extra points (Timeline, if on), and otherwise to **sudden death**: the tied teams play one more song each until one leads. A line under "…'s turn" says when the last round or sudden death is on. Closest year ends as soon as a team reaches the target, since everyone answers every song.
+
 Each mode has its **rules** on the setup screen, and a **Rules** button during the game shows them again.
 
 **Next song** waits a moment after the card is revealed, so a double click on Confirm can't skip the reveal.

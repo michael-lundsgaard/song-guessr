@@ -4,6 +4,7 @@ import {
   canOverrule,
   compareTeams,
   endGame,
+  isFinalRound,
   isTurnBased,
   markPlayed,
   nextTurn,
@@ -238,6 +239,11 @@ export function GameScreen({ lib, connected, game, onChange, onLibChange, onPlay
             <p className="turn">
               <b>{isTurnBased(mode) ? t.turn(team.name) : t.everyoneGuesses}</b>
             </p>
+            {isTurnBased(mode) && isFinalRound(game) && (
+              <p className="final-note">
+                {game.suddenDeath ? t.suddenDeath : t.finalRound([...game.teams].sort(compareTeams)[0].name)}
+              </p>
+            )}
             {!round.revealed && <p className="muted hint">{hint}</p>}
 
             {mode === 'timeline' && round.revealed && (
