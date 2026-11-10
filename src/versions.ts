@@ -10,9 +10,7 @@ export interface OriginalRelease {
 
 /** State of a "find original year" lookup for one song. */
 export type YearLookup =
-  | { state: 'loading' }
-  | { state: 'done'; release: OriginalRelease | null }
-  | { state: 'error'; message: string };
+  { state: 'loading' } | { state: 'done'; release: OriginalRelease | null } | { state: 'error'; message: string };
 
 /** The release a finished lookup found, if it is earlier than the song's current year. */
 export function earlierRelease(song: Song, lookup: YearLookup | undefined): OriginalRelease | null {
