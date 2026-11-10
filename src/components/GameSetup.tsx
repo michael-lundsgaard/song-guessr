@@ -13,6 +13,9 @@ const MODES: { mode: Mode; defaultTarget: number }[] = [
   { mode: 'artist', defaultTarget: 10 },
 ];
 
+/** Timer choices in seconds; 0 is off. */
+const TIMERS = [0, 30, 45, 60];
+
 export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Setup) => void }) {
   const t = useT();
   const collections = Object.values(lib.collections).sort(compareCollections);
@@ -27,6 +30,7 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
       // Not remembered: a harder game is a one-off choice.
       randomStart: false,
       extraPoints: last?.extraPoints ?? false,
+      timer: last?.timer ?? 0,
     };
   });
   const patch = (p: Partial<Setup>) => setSetup((s) => ({ ...s, ...p }));
@@ -184,6 +188,21 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
           />
           {t.randomStart}
         </label>
+        <div className="inline timer-option" role="group" aria-label={t.timer} title={t.timerTitle}>
+          {t.timer}
+          <span className="segmented">
+            {TIMERS.map((s) => (
+              <button
+                key={s}
+                className={(setup.timer ?? 0) === s ? 'active' : ''}
+                aria-pressed={(setup.timer ?? 0) === s}
+                onClick={() => patch({ timer: s })}
+              >
+                {s ? t.timerSeconds(s) : t.timerOff}
+              </button>
+            ))}
+          </span>
+        </div>
         {setup.mode === 'timeline' && (
           <label className="inline" title={t.extraPointsTitle}>
             <input

@@ -290,3 +290,48 @@ test('timeline: fixing the year saves it on the song and scores the round again'
     .poll(() => JSON.parse(fs.readFileSync('e2e/.data/library.json', 'utf8')).songs[songId].yearOverride)
     .toBe(1955);
 });
+
+test('timer: counts down from when the song starts, then counts the time over', async ({ page }) => {
+  const lib = makeLibrary();
+  await page.clock.install();
+  await seed(page, lib, { 'sg.page': 'play', 'sg.game': makeTimelineGame(lib, 5, { timer: 30 }) });
+  await page.goto('/');
+  const count = page.getByRole('timer');
+  // Waits for the song: full, dimmed.
+  await expect(count).toHaveText('30');
+  await expect(page.locator('.card-timer.idle')).toHaveCount(1);
+  await page.clock.fastForward(5_000);
+  await expect(count).toHaveText('30');
+  await page.keyboard.press(' '); // play
+  await page.clock.fastForward(8_000);
+  await expect(count).toHaveText('22');
+  await expect(page.locator('.card-timer.run')).toHaveCount(1);
+  await page.screenshot({ ...shot('timer-running'), animations: 'disabled' });
+  await page.clock.fastForward(14_000);
+  await expect(count).toHaveText('8');
+  await expect(page.locator('.card-timer.warn')).toHaveCount(1);
+  await page.screenshot({ ...shot('timer-warning'), animations: 'disabled' });
+  await page.clock.fastForward(20_000);
+  await expect(count).toHaveText('−12');
+  await expect(count).toHaveAttribute('aria-label', '12 seconds over time');
+  await page.screenshot({ ...shot('timer-over'), animations: 'disabled' });
+  // It never stops anything: the team can still answer.
+  await page.locator('.slot').first().click();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.verdict')).toBeVisible();
+  await expect(count).toHaveCount(0);
+});
+
+test('timer: off by default, chosen in setup, shown in the rules', async ({ page }) => {
+  await seed(page, makeLibrary(), { 'sg.page': 'play' });
+  await page.goto('/');
+  const timer = page.getByRole('group', { name: 'Timer' });
+  await expect(timer.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  await timer.getByRole('button', { name: '45 s' }).click();
+  await page.screenshot(shot('setup-timer'));
+  await page.getByText('Party').click();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  await expect(page.getByRole('timer')).toBeVisible();
+  await page.getByRole('button', { name: 'Rules', exact: true }).click();
+  await expect(page.locator('dialog[open]')).toContainText('Timer: 45 seconds');
+});

@@ -21,6 +21,7 @@ import { useT } from '../i18n';
 import { decadeOf, isYearSuspect, setCheckedYear, songYear } from '../library';
 import { pause, play, replay, togglePlay, usePlayer } from '../player';
 import type { Library, Song } from '../types';
+import { CardTimer } from './CardTimer';
 import { PlayerBar } from './PlayerBar';
 import { RulesDialog } from './Rules';
 
@@ -67,6 +68,15 @@ export function GameScreen({ lib, connected, game, onChange, onLibChange, onPlay
     const timer = setTimeout(() => setNextReady(true), NEXT_GUARD_MS);
     return () => clearTimeout(timer);
   }, [revealed, round?.songId]);
+
+  // The timer starts when the round's song first starts playing (also after a reload, once play is pressed).
+  const [timerStart, setTimerStart] = useState<{ songId: string; at: number } | null>(null);
+  const timerStartedAt = timerStart && timerStart.songId === round?.songId ? timerStart.at : null;
+  useEffect(() => {
+    if (game.setup.timer && round && !round.revealed && isPlayingRound && timerStartedAt == null) {
+      setTimerStart({ songId: round.songId, at: Date.now() });
+    }
+  }, [game.setup.timer, round, isPlayingRound, timerStartedAt]);
 
   function confirmPending() {
     if (pending == null) return;
@@ -216,7 +226,12 @@ export function GameScreen({ lib, connected, game, onChange, onLibChange, onPlay
         </button>
       </div>
       {showRules && (
-        <RulesDialog mode={mode} randomStart={game.setup.randomStart} onClose={() => setShowRules(false)} />
+        <RulesDialog
+          mode={mode}
+          randomStart={game.setup.randomStart}
+          timer={game.setup.timer}
+          onClose={() => setShowRules(false)}
+        />
       )}
 
       {song && round && (
@@ -225,6 +240,7 @@ export function GameScreen({ lib, connected, game, onChange, onLibChange, onPlay
             <RevealedCard song={song} />
           ) : (
             <div className={`card hidden-card${isPlayingRound && player.playing ? ' playing' : ''}`}>
+              {!!game.setup.timer && <CardTimer seconds={game.setup.timer} startedAt={timerStartedAt} />}
               <div className="mystery">?</div>
               <div className="equalizer" aria-hidden>
                 <i />

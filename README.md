@@ -83,6 +83,8 @@ When the table disagrees with the revealed card, the host has two buttons below 
 - **Count it as right / Count it as wrong** (Timeline, Which decade?, Who's singing?) flips the verdict for this round only; the song is not changed. A Timeline card counted as right goes where its year belongs, so the timeline stays in order. Click again to undo.
 - **Fix year** (every mode) saves the real year on the song, as if corrected in the library (and no longer ⚠), and scores the round again with the same answer. Extra points already given stay if the answer is still right.
 
+**Timer** (setup: Off / 30 / 45 / 60 s): from when the song starts, the hidden card's outline drains like a fuse and the seconds count down at the top of the card; the last 10 are amber. At zero the outline turns red with one soft flash, and the count runs on below zero (−12), like a stage timer. It's only a cue: nothing stops, the host decides. Pausing the music doesn't pause it.
+
 Keys: **space** play/pause, **R** replay, **Enter** reveal (Guess) or confirm placement (Timeline), **→** next song.
 
 A year shown as **≈ 1981** is still flagged ⚠ in the library: it may be a remaster or compilation year, so the real year can be earlier. In Timeline, such a card also counts as correct one slot earlier.

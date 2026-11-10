@@ -1175,6 +1175,140 @@ button.mini.big-icon {
   }
 }
 
+/* Timer: the hidden card is the clock. Its outline drains like a fuse; at zero it turns red, flashes once, and the clock runs on below zero. Calm on purpose: a nudge, not an alarm. */
+
+.hidden-card {
+  position: relative;
+}
+
+.card-timer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.card-timer rect {
+  x: 3px;
+  y: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  rx: 15px;
+  fill: none;
+  stroke-width: 5px;
+}
+
+.card-timer .track {
+  stroke: var(--border);
+}
+
+.card-timer .fuse {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  transition:
+    stroke-dashoffset 0.2s linear,
+    stroke 0.4s;
+}
+
+.card-timer.idle .fuse {
+  opacity: 0.35;
+}
+
+.card-timer.warn .fuse {
+  stroke: var(--warn);
+}
+
+.card-timer.over .track {
+  stroke: var(--danger);
+}
+
+.timer-count {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.timer-digits {
+  position: relative;
+}
+
+.timer-sign {
+  position: absolute;
+  right: 100%;
+  padding-right: 0.06em;
+}
+
+.timer-count.run {
+  color: var(--accent);
+}
+
+.timer-count.warn {
+  color: var(--warn);
+}
+
+.timer-count.over {
+  color: var(--danger);
+}
+
+/* The over class stays on, so this runs once: the moment time is up. */
+.hidden-card:has(.card-timer.over) {
+  animation: timer-flash 0.9s ease-out;
+}
+
+@keyframes timer-flash {
+  from {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 35%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hidden-card:has(.card-timer.over) {
+    animation: none;
+  }
+}
+
+/* Setup: Off / 30 s / 45 s / 60 s as one row of joined buttons. */
+
+.timer-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 12px;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+
+.segmented button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
 /* Play page: the main buttons sit in a bar fixed to the bottom of the window, so they never move. */
 
 .play-main {

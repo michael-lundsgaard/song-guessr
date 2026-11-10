@@ -15,6 +15,8 @@ export interface GameSetup {
   randomStart: boolean;
   /** Timeline: an extra point each for the exact year, the artist and the title, used as a tiebreaker. */
   extraPoints?: boolean;
+  /** Seconds on the visual timer from when the song starts; 0 or missing means no timer. */
+  timer?: number;
 }
 
 export interface Team {

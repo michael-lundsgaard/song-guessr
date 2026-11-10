@@ -266,6 +266,14 @@ const en = {
   optionsHeading: 'Options',
   randomStart: 'Harder: random start',
   randomStartTitle: 'Start each song somewhere in the middle instead of at the beginning',
+  timer: 'Timer',
+  timerOff: 'Off',
+  timerSeconds: (n: number) => `${n} s`,
+  timerTitle: 'A countdown on the card from when the song starts. It only shows the time; it never stops anything.',
+  timeLeft: (n: number) => (n === 1 ? '1 second left' : `${n} seconds left`),
+  timeOver: (n: number) => (n === 1 ? '1 second over time' : `${n} seconds over time`),
+  rulesTimer: (n: number) =>
+    `Timer: ${n} seconds from when the song starts. When time is up the card turns red and the count runs on below zero; the host decides what happens then.`,
   extraPoints: 'Extra points for the exact year, artist and title (tiebreaker)',
   extraPointsTitle:
     'After a card placed right, one extra point each for naming the exact year, the artist and the title. They only decide a tie.',
@@ -618,6 +626,14 @@ const da: Messages = {
   optionsHeading: 'Indstillinger',
   randomStart: 'Sværere: tilfældig start',
   randomStartTitle: 'Start hver sang et sted i midten i stedet for fra begyndelsen',
+  timer: 'Timer',
+  timerOff: 'Fra',
+  timerSeconds: (n) => `${n} sek.`,
+  timerTitle: 'En nedtælling på kortet fra sangen starter. Den viser kun tiden og stopper aldrig noget.',
+  timeLeft: (n) => (n === 1 ? '1 sekund tilbage' : `${n} sekunder tilbage`),
+  timeOver: (n) => (n === 1 ? '1 sekund over tid' : `${n} sekunder over tid`),
+  rulesTimer: (n) =>
+    `Timer: ${n} sekunder fra sangen starter. Når tiden er gået, bliver kortet rødt, og tællingen fortsætter under nul; værten bestemmer, hvad der så sker.`,
   extraPoints: 'Ekstrapoint for præcist år, kunstner og titel (afgør uafgjort)',
   extraPointsTitle:
     'Efter et rigtigt placeret kort ét ekstrapoint for hvert af: det præcise år, kunstneren og titlen. De afgør kun uafgjort.',
