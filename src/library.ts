@@ -62,8 +62,9 @@ export function yearSuggestion(s: Song): number | null {
   return current == null || found < current ? found : null;
 }
 
-const SUSPECT_ALBUM_RE =
-  /remaster|greatest|best of|hits|collection|anniversary|deluxe|edition|live|anthology|essential/i;
+// Album names of remasters, reissues and compilations. Whole words, so "Alive 2007" isn't "live". Deluxe and
+// expanded editions are left out: they usually come out the same year as the album.
+const SUSPECT_ALBUM_RE = /\b(remaster\w*|greatest|best of|hits|collection|anniversary|live|anthology|essentials?)\b/i;
 
 /** Spotify's year is the album's release year, which is often a later remaster or compilation. */
 export function isYearSuspect(s: Song) {

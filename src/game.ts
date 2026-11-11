@@ -17,6 +17,8 @@ export interface GameSetup {
   extraPoints?: boolean;
   /** Seconds on the visual timer from when the song starts; 0 or missing means no timer. */
   timer?: number;
+  /** Leave out songs whose year is still uncertain (flagged ⚠ in the library). */
+  skipUncertain?: boolean;
 }
 
 export interface Team {
@@ -73,15 +75,22 @@ export const isTurnBased = (mode: Mode) => mode !== 'closest';
 
 // --- Deck ---
 
-/** Songs a game with these settings can draw from. Songs without a year can't be placed, so they're left out. */
-export function eligibleSongs(lib: Library, setup: Pick<GameSetup, 'collectionIds' | 'decades'>): Song[] {
+/**
+ * Songs a game with these settings can draw from. Songs without a year can't be placed, so they're left out, and
+ * so are songs with an uncertain year when the setup asks for it.
+ */
+export function eligibleSongs(
+  lib: Library,
+  setup: Pick<GameSetup, 'collectionIds' | 'decades' | 'skipUncertain'>,
+): Song[] {
   const collections = new Set(setup.collectionIds);
   const decades = new Set(setup.decades);
   return Object.values(lib.songs).filter(
     (s) =>
       songYear(s) != null &&
       s.collectionIds.some((c) => collections.has(c)) &&
-      (!decades.size || decades.has(decadeOf(songYear(s))!)),
+      (!decades.size || decades.has(decadeOf(songYear(s))!)) &&
+      !(setup.skipUncertain && isYearSuspect(s)),
   );
 }
 

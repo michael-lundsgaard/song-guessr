@@ -335,3 +335,24 @@ test('timer: off by default, chosen in setup, shown in the rules', async ({ page
   await page.getByRole('button', { name: 'Rules', exact: true }).click();
   await expect(page.locator('dialog[open]')).toContainText('Timer: 45 seconds');
 });
+
+test('setup: songs with an uncertain year can be left out of the deck', async ({ page }) => {
+  // ⚠: every 5th song is a "Greatest Hits" compilation, every 7th has "Remastered" in its title: 25 of 80.
+  const lib = makeLibrary();
+  await seed(page, lib, { 'sg.page': 'play' });
+  await page.goto('/');
+  await page.getByText('Party').click();
+  const deck = page.getByText(/songs in the deck/);
+  await expect(deck).toHaveText('80 songs in the deck · 25 with an uncertain year (shown as ≈ and judged leniently)');
+  await page.getByLabel('Leave out songs with an uncertain year').check();
+  await expect(deck).toHaveText('55 songs in the deck · 25 with an uncertain year left out');
+  await page.screenshot(shot('setup-skip-uncertain'));
+  await page.getByRole('button', { name: 'Start game' }).click();
+  const game = await page.evaluate(() => JSON.parse(localStorage.getItem('sg.game')!));
+  const uncertain = Object.values(lib.songs)
+    .filter((s) => s.albumType === 'compilation' || /remaster/i.test(s.title))
+    .map((s) => s.id);
+  const used = [...game.deck, game.round.songId, ...game.teams.flatMap((t: { timeline: string[] }) => t.timeline)];
+  expect(used).toHaveLength(55);
+  expect(used.filter((id: string) => uncertain.includes(id))).toEqual([]);
+});

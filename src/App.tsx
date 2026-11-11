@@ -5,7 +5,7 @@ import { PlayerBar } from './components/PlayerBar';
 import { PlayPage } from './components/PlayPage';
 import { SettingsDialog } from './components/SettingsDialog';
 import { SongTable, type Sort, type SortKey, type YearActions } from './components/SongTable';
-import { pool, runImport, type ImportResult } from './importer';
+import { runImport, type ImportResult } from './importer';
 import { parseImportText } from './parse';
 import {
   addToCollection,
@@ -35,11 +35,10 @@ import {
   upsertSongs,
 } from './library';
 import { initBrowserPlayer } from './player';
-import { getClientId, handleAuthCallback, isLoggedIn, isQuotaExceeded, login, logout, needsReconnect } from './spotify';
+import { getClientId, handleAuthCallback, isLoggedIn, login, logout, needsReconnect } from './spotify';
 import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
 import type { Collection, CollectionSource, Library, Song } from './types';
-import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
 import { checkYears, connectYearCheck, dismissYearCheck, stopYearCheck, useYearCheck } from './yearCheck';
 
 type SaveState = 'saved' | 'saving' | 'error';
@@ -113,9 +112,6 @@ export default function App() {
 
   const update = useCallback((fn: (l: Library) => Library) => setLib((l) => (l ? fn(l) : l)), []);
 
-  // Original-year lookups live only for this session; accepting one stores the year on the song.
-  const [yearLookups, setYearLookups] = useState<Record<string, YearLookup>>({});
-  const [findingYears, setFindingYears] = useState(false);
   const libRef = useRef(lib);
   libRef.current = lib;
 
@@ -138,27 +134,12 @@ export default function App() {
     setToCheck([]);
     setOutcomeFilter(null);
   }, [toCheck]);
-  /** Returns false when Spotify's quota is used up, so a bulk lookup can stop. */
-  const findYear = useCallback(async (id: string) => {
-    const song = libRef.current?.songs[id];
-    if (!song) return true;
-    const setLookup = (lookup: YearLookup) => setYearLookups((m) => ({ ...m, [id]: lookup }));
-    setLookup({ state: 'loading' });
-    try {
-      setLookup({ state: 'done', release: await findOriginalRelease(song) });
-    } catch (e) {
-      setLookup({ state: 'error', message: e instanceof Error ? e.message : String(e) });
-      return !isQuotaExceeded(e);
-    }
-    return true;
-  }, []);
   const yearActions = useMemo<YearActions>(
     () => ({
       set: (id, year) => update((l) => setYear(l, id, year)),
-      find: (id) => void findYear(id),
       confirm: (id) => update((l) => confirmYear(l, id)),
     }),
-    [update, findYear],
+    [update],
   );
 
   const collections = useMemo(() => Object.values(lib?.collections ?? {}).sort(compareCollections), [lib?.collections]);
@@ -239,14 +220,6 @@ export default function App() {
 
   const suspects = useMemo(() => inView.filter(isYearSuspect), [inView]);
   const suspectCount = suspects.length;
-  const foundYears = useMemo(
-    () =>
-      suspects.flatMap((s) => {
-        const release = earlierRelease(s, yearLookups[s.id]);
-        return release ? [{ id: s.id, year: release.year }] : [];
-      }),
-    [suspects, yearLookups],
-  );
   const activeCollection = lib?.collections[view];
 
   const duplicates = useMemo(() => (lib ? findDuplicates(lib) : []), [lib?.songs, lib?.ignoredDuplicates]);
@@ -264,16 +237,6 @@ export default function App() {
     checkYears(uncheckedInView.map((s) => s.id));
   }
   const checkError = yearCheck.running ? null : (yearCheck.error ?? backupError);
-
-  async function findAllYears() {
-    const ids = suspects.filter((s) => yearLookups[s.id]?.state !== 'done').map((s) => s.id);
-    setFindingYears(true);
-    let quotaHit = false;
-    await pool(ids, 3, async (id) => {
-      if (!quotaHit && !(await findYear(id))) quotaHit = true;
-    });
-    setFindingYears(false);
-  }
 
   function mergeGroup(keepId: string, group: Song[]) {
     const ids = group.map((s) => s.id);
@@ -580,25 +543,6 @@ export default function App() {
                       {t.checkYear(suspectCount)}
                     </label>
                   )}
-                  {suspectCount > 0 && (
-                    <button
-                      className="ghost small"
-                      disabled={!connected || findingYears}
-                      title={t.findYearsTitle}
-                      onClick={findAllYears}
-                    >
-                      {findingYears ? t.findingYears : t.findYears}
-                    </button>
-                  )}
-                  {foundYears.length > 0 && (
-                    <button
-                      className="ghost small"
-                      title={t.useFoundYearsTitle}
-                      onClick={() => update((l) => foundYears.reduce((acc, f) => setYear(acc, f.id, f.year), l))}
-                    >
-                      {t.useFoundYears(foundYears.length)}
-                    </button>
-                  )}
                   {yearCheck.running ? (
                     <span className="inline">
                       <span className="muted">{t.checkingYears(yearCheck.done, yearCheck.total)}</span>
@@ -718,7 +662,6 @@ export default function App() {
                   resetKey={`${view}|${query}|${decade}|${suspectOnly}|${outcomeFilter}|${sort.key}|${sort.dir}`}
                   sort={sort}
                   onSort={setSort}
-                  yearLookups={yearLookups}
                   onToggle={toggle}
                   onToggleAll={toggleAll}
                   yearActions={yearActions}

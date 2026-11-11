@@ -31,6 +31,7 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
       randomStart: false,
       extraPoints: last?.extraPoints ?? false,
       timer: last?.timer ?? 0,
+      skipUncertain: last?.skipUncertain ?? false,
     };
   });
   const patch = (p: Partial<Setup>) => setSetup((s) => ({ ...s, ...p }));
@@ -53,7 +54,11 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
   }, [lib, setup.collectionIds]);
 
   const songs = useMemo(() => eligibleSongs(lib, setup), [lib, setup]);
-  const uncertain = songs.filter(isYearSuspect).length;
+  // Counted without the "leave out" option, so the line can say how many it leaves out.
+  const uncertain = useMemo(
+    () => eligibleSongs(lib, { ...setup, skipUncertain: false }).filter(isYearSuspect).length,
+    [lib, setup],
+  );
   const [recent, setRecent] = useState(loadRecent);
   const played = useMemo(() => {
     const ids = new Set(recent);
@@ -118,8 +123,18 @@ export function GameSetup({ lib, onStart }: { lib: Library; onStart: (setup: Set
         )}
         <p className="muted">
           {t.deckCount(songs.length)}
-          {uncertain > 0 && t.uncertainCount(uncertain)}
+          {uncertain > 0 && (setup.skipUncertain ? t.uncertainSkipped(uncertain) : t.uncertainCount(uncertain))}
         </p>
+        {uncertain > 0 && (
+          <label className="inline" title={t.skipUncertainTitle}>
+            <input
+              type="checkbox"
+              checked={!!setup.skipUncertain}
+              onChange={(e) => patch({ skipUncertain: e.target.checked })}
+            />
+            {t.skipUncertain}
+          </label>
+        )}
         {played > 0 && (
           <p className="muted">
             {t.playedNote(played, songs.length - played)}{' '}

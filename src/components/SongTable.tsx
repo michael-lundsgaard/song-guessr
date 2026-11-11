@@ -2,7 +2,6 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { autoYear, isYearSuspect, songYear, yearSuggestion } from '../library';
 import type { Collection, Song } from '../types';
 import { locale, useT } from '../i18n';
-import { earlierRelease, type YearLookup } from '../versions';
 import { PlayButton } from './PlayerBar';
 
 export type SortKey = 'added' | 'year' | 'title' | 'artist' | 'album';
@@ -13,8 +12,6 @@ export interface Sort {
 
 export interface YearActions {
   set: (id: string, year: number | null) => void;
-  /** Looks up the song's original release year on Spotify. */
-  find: (id: string) => void;
   /** Accepts Spotify's year, clearing the ⚠ flag. */
   confirm: (id: string) => void;
 }
@@ -23,7 +20,6 @@ interface Props {
   songs: Song[];
   collections: Record<string, Collection>;
   selected: Set<string>;
-  yearLookups: Record<string, YearLookup>;
   /** Changes whenever the filters/sort change, so the table scrolls back to its first page. */
   resetKey: string;
   sort: Sort;
@@ -39,7 +35,6 @@ export function SongTable({
   songs,
   collections,
   selected,
-  yearLookups,
   resetKey,
   sort,
   onSort,
@@ -105,7 +100,6 @@ export function SongTable({
               song={s}
               collections={collections}
               isSelected={selected.has(s.id)}
-              yearLookup={yearLookups[s.id]}
               onToggle={onToggle}
               yearActions={yearActions}
             />
@@ -152,20 +146,12 @@ interface RowProps {
   song: Song;
   collections: Record<string, Collection>;
   isSelected: boolean;
-  yearLookup?: YearLookup;
   onToggle: (id: string) => void;
   yearActions: YearActions;
 }
 
 // Memoized so editing one song or toggling one checkbox only re-renders that row.
-const SongRow = memo(function SongRow({
-  song: s,
-  collections,
-  isSelected,
-  yearLookup,
-  onToggle,
-  yearActions,
-}: RowProps) {
+const SongRow = memo(function SongRow({ song: s, collections, isSelected, onToggle, yearActions }: RowProps) {
   const t = useT();
   return (
     <tr className={isSelected ? 'selected' : undefined}>
@@ -185,7 +171,7 @@ const SongRow = memo(function SongRow({
         {s.album}
       </td>
       <td className="year">
-        <YearCell song={s} lookup={yearLookup} actions={yearActions} />
+        <YearCell song={s} actions={yearActions} />
       </td>
       <td>
         {s.collectionIds
@@ -216,7 +202,7 @@ const SongRow = memo(function SongRow({
   );
 });
 
-function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
+function YearCell({ song, actions }: { song: Song; actions: YearActions }) {
   const t = useT();
   const year = songYear(song);
   const [draft, setDraft] = useState(year?.toString() ?? '');
@@ -254,14 +240,14 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
       {suspect && <span className="flag">⚠</span>}
       {overridden && <span className="flag">✎</span>}
       {fromMusicBrainz && <span className="flag mb">MB</span>}
-      {suspect && <YearSuggestion song={song} lookup={lookup} actions={actions} />}
+      {suspect && <YearSuggestion song={song} actions={actions} />}
     </span>
   );
 }
 
-function YearSuggestion({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
+/** For a ⚠ song: MusicBrainz's earlier year, if any, and ✓ to keep the year shown. */
+function YearSuggestion({ song, actions }: { song: Song; actions: YearActions }) {
   const t = useT();
-  const earlier = earlierRelease(song, lookup);
   const suggested = yearSuggestion(song);
   return (
     <>
@@ -273,31 +259,6 @@ function YearSuggestion({ song, lookup, actions }: { song: Song; lookup?: YearLo
         >
           → {suggested}
         </button>
-      )}
-      {!lookup && suggested == null && (
-        <button className="mini" title={t.findYearTitle} onClick={() => actions.find(song.id)}>
-          🔍
-        </button>
-      )}
-      {lookup?.state === 'loading' && <span className="muted">…</span>}
-      {lookup?.state === 'error' && (
-        <button className="mini danger" title={t.retryTitle(lookup.message)} onClick={() => actions.find(song.id)}>
-          !
-        </button>
-      )}
-      {earlier && (
-        <button
-          className="mini suggestion"
-          title={t.earliestFoundTitle(earlier.album, earlier.year)}
-          onClick={() => actions.set(song.id, earlier.year)}
-        >
-          → {earlier.year}
-        </button>
-      )}
-      {lookup?.state === 'done' && !earlier && (
-        <span className="muted" title={t.noEarlierTitle}>
-          {t.noEarlier}
-        </span>
       )}
       <button
         className={`mini${suggested != null ? ' keep' : ''}`}

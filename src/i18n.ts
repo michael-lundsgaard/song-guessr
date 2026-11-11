@@ -50,11 +50,6 @@ const en = {
   searchLibrary: 'Search title, artist, album…',
   checkYear: (n: number) => `⚠ Check year (${n})`,
   checkYearTitle: 'Songs whose Spotify year may be a remaster or compilation year',
-  findYears: '🔍 Find original years',
-  findingYears: 'Finding original years…',
-  findYearsTitle: 'Search Spotify for the earliest release of every ⚠ song in this view',
-  useFoundYears: (n: number) => `Use found years (${n})`,
-  useFoundYearsTitle: 'Use the earliest release year found for each ⚠ song',
   decadesTitle: 'Songs per decade: handy for a balanced timeline',
   selectedCount: (n: number) => `${n} selected`,
   addToCollection: 'Add to collection…',
@@ -104,12 +99,6 @@ const en = {
   yearSuspectTitle: (album: string) =>
     `From "${album}": this may be a remaster or compilation year. Check the original release year.`,
   yearReleaseTitle: (date: string) => `Release date on Spotify: ${date}`,
-  findYearTitle: 'Find the original release year on Spotify',
-  retryTitle: (message: string) => `${message}. Click to retry.`,
-  earliestFoundTitle: (album: string, year: number) =>
-    `Earliest release found: "${album}" (${year}). Click to use this year.`,
-  noEarlier: 'none',
-  noEarlierTitle: 'Spotify has no earlier release of this song',
   confirmYearTitle: "Spotify's year is right: stop flagging it",
   checkYears: (n: number) => `Look up years on MusicBrainz (${n})`,
   checkYearsTitle:
@@ -282,6 +271,10 @@ const en = {
   makeCollectionFirst: 'Make a collection in the library first.',
   decadeFilterTitle: 'Leave all off to play every decade',
   deckCount: (n: number) => `${n} songs in the deck`,
+  uncertainSkipped: (n: number) => ` · ${n} with an uncertain year left out`,
+  skipUncertain: 'Leave out songs with an uncertain year',
+  skipUncertainTitle:
+    "Only play songs whose year is checked: MusicBrainz found it, or you set or ✓'d it in the library",
   uncertainCount: (n: number) => ` · ${n} with an uncertain year (shown as ≈ and judged leniently)`,
   playedNote: (played: number, fresh: number) =>
     `${played} of these were played in earlier games, so they come last: the next ${fresh} songs are all new.`,
@@ -449,11 +442,6 @@ const da: Messages = {
   searchLibrary: 'Søg i titel, kunstner, album…',
   checkYear: (n) => `⚠ Tjek år (${n})`,
   checkYearTitle: 'Sange hvor Spotifys år måske er året for en remaster eller opsamling',
-  findYears: '🔍 Find de oprindelige år',
-  findingYears: 'Finder de oprindelige år…',
-  findYearsTitle: 'Søg på Spotify efter den tidligste udgivelse af hver ⚠-sang i visningen',
-  useFoundYears: (n) => `Brug de fundne år (${n})`,
-  useFoundYearsTitle: 'Brug det tidligste udgivelsesår, der blev fundet for hver ⚠-sang',
   decadesTitle: 'Sange pr. årti: praktisk for en jævn tidslinje',
   selectedCount: (n) => `${n} valgt`,
   addToCollection: 'Tilføj til samling…',
@@ -500,11 +488,6 @@ const da: Messages = {
   yearSuspectTitle: (album) =>
     `Fra "${album}": det kan være året for en remaster eller opsamling. Tjek det oprindelige udgivelsesår.`,
   yearReleaseTitle: (date) => `Udgivelsesdato på Spotify: ${date}`,
-  findYearTitle: 'Find det oprindelige udgivelsesår på Spotify',
-  retryTitle: (message) => `${message}. Klik for at prøve igen.`,
-  earliestFoundTitle: (album, year) => `Tidligste udgivelse fundet: "${album}" (${year}). Klik for at bruge året.`,
-  noEarlier: 'ingen',
-  noEarlierTitle: 'Spotify har ingen tidligere udgivelse af sangen',
   confirmYearTitle: 'Spotifys år er rigtigt: stop med at markere det',
   checkYears: (n) => `Slå år op på MusicBrainz (${n})`,
   checkYearsTitle:
@@ -670,6 +653,10 @@ const da: Messages = {
   makeCollectionFirst: 'Lav først en samling i biblioteket.',
   decadeFilterTitle: 'Lad alle være slået fra for at spille alle årtier',
   deckCount: (n) => `${n} sange i bunken`,
+  uncertainSkipped: (n) => ` · ${n} med usikkert år er udeladt`,
+  skipUncertain: 'Udelad sange med usikkert år',
+  skipUncertainTitle:
+    'Spil kun sange, hvor året er tjekket: MusicBrainz har fundet det, eller du har sat eller ✓-markeret det i biblioteket',
   uncertainCount: (n) => ` · ${n} med usikkert år (vises som ≈ og bedømmes mildt)`,
   playedNote: (played, fresh) =>
     `${played} af dem er spillet i tidligere spil, så de kommer sidst: de næste ${fresh} sange er alle nye.`,
