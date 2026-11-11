@@ -10,6 +10,7 @@ import { parseImportText } from './parse';
 import {
   addToCollection,
   applyYearHints,
+  backupLibrary,
   compareCollections,
   confirmYear,
   decadeOf,
@@ -21,11 +22,15 @@ import {
   isYearSuspect,
   loadLibrary,
   mergeSongs,
+  needsYearCheck,
+  yearSuggestion,
+  type YearCheckOutcome,
   removeFromCollection,
   renameCollection,
   saveLibrary,
   setCollectionSource,
   setYear,
+  setYearCheck,
   songYear,
   upsertSongs,
 } from './library';
@@ -35,8 +40,11 @@ import { setLang, useLang, useT, type Lang } from './i18n';
 import { setTheme, useTheme, type Theme } from './theme';
 import type { Collection, CollectionSource, Library, Song } from './types';
 import { earlierRelease, findOriginalRelease, type YearLookup } from './versions';
+import { checkYears, connectYearCheck, dismissYearCheck, stopYearCheck, useYearCheck } from './yearCheck';
 
 type SaveState = 'saved' | 'saving' | 'error';
+
+const YEAR_OUTCOMES: YearCheckOutcome[] = ['corrected', 'review', 'unchanged', 'notFound'];
 
 const ALL = '__all__';
 const UNSORTED = '__unsorted__';
@@ -64,6 +72,8 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [decade, setDecade] = useState<number | null>(null);
   const [suspectOnly, setSuspectOnly] = useState(false);
+  // Shows only the songs with this outcome in the last MusicBrainz run (from its summary line).
+  const [outcomeFilter, setOutcomeFilter] = useState<YearCheckOutcome | null>(null);
   const [sort, setSort] = useState<Sort>({ key: 'added', dir: 'desc' });
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -108,6 +118,26 @@ export default function App() {
   const [findingYears, setFindingYears] = useState(false);
   const libRef = useRef(lib);
   libRef.current = lib;
+
+  // MusicBrainz year check: runs in the background and stores each result on its song.
+  const yearCheck = useYearCheck();
+  const [backupError, setBackupError] = useState<string | null>(null);
+  useEffect(
+    () =>
+      connectYearCheck({
+        getSong: (id) => libRef.current?.songs[id],
+        save: (id, check) => update((l) => setYearCheck(l, id, check)),
+      }),
+    [update],
+  );
+  // Songs to check once the library update that adds them has rendered (the check reads songs from libRef).
+  const [toCheck, setToCheck] = useState<string[]>([]);
+  useEffect(() => {
+    if (!toCheck.length) return;
+    checkYears(toCheck);
+    setToCheck([]);
+    setOutcomeFilter(null);
+  }, [toCheck]);
   /** Returns false when Spotify's quota is used up, so a bulk lookup can stop. */
   const findYear = useCallback(async (id: string) => {
     const song = libRef.current?.songs[id];
@@ -168,13 +198,31 @@ export default function App() {
     return [...counts.entries()].sort((a, b) => a[0] - b[0]);
   }, [inView]);
 
+  // "To review" counts down as suggestions are taken or dismissed; the other outcomes are what the run did.
+  const pendingReview = useMemo(
+    () => (yearCheck.outcomes?.review ?? []).filter((id) => lib?.songs[id] && yearSuggestion(lib.songs[id]) != null),
+    [yearCheck.outcomes, lib?.songs],
+  );
+  const outcomeIds = useMemo(
+    () =>
+      outcomeFilter
+        ? new Set(outcomeFilter === 'review' ? pendingReview : (yearCheck.outcomes?.[outcomeFilter] ?? []))
+        : null,
+    [outcomeFilter, yearCheck.outcomes, pendingReview],
+  );
+  // The summary belongs to the view it was run in.
+  useEffect(() => {
+    setOutcomeFilter(null);
+    if (!yearCheck.running) dismissYearCheck();
+  }, [view]);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = inView.filter(
       (s) =>
         (!q || `${s.title} ${s.artists.join(' ')} ${s.album}`.toLowerCase().includes(q)) &&
         (decade == null || decadeOf(songYear(s)) === decade) &&
-        (!suspectOnly || isYearSuspect(s)),
+        (!suspectOnly || isYearSuspect(s)) &&
+        (!outcomeIds || outcomeIds.has(s.id)),
     );
     const cmp: Record<SortKey, (a: Song, b: Song) => number> = {
       added: (a, b) => a.addedAt - b.addedAt,
@@ -187,7 +235,7 @@ export default function App() {
     // Songs without a year go last in both directions.
     const noYear = (s: Song) => (sort.key === 'year' && songYear(s) == null ? 1 : 0);
     return filtered.sort((a, b) => noYear(a) - noYear(b) || sign * cmp[sort.key](a, b));
-  }, [inView, query, decade, suspectOnly, sort]);
+  }, [inView, query, decade, suspectOnly, outcomeIds, sort]);
 
   const suspects = useMemo(() => inView.filter(isYearSuspect), [inView]);
   const suspectCount = suspects.length;
@@ -202,6 +250,20 @@ export default function App() {
   const activeCollection = lib?.collections[view];
 
   const duplicates = useMemo(() => (lib ? findDuplicates(lib) : []), [lib?.songs, lib?.ignoredDuplicates]);
+
+  const uncheckedInView = useMemo(() => inView.filter(needsYearCheck), [inView]);
+  async function checkViewYears() {
+    setBackupError(null);
+    try {
+      await backupLibrary();
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : String(e));
+      return;
+    }
+    setOutcomeFilter(null);
+    checkYears(uncheckedInView.map((s) => s.id));
+  }
+  const checkError = yearCheck.running ? null : (yearCheck.error ?? backupError);
 
   async function findAllYears() {
     const ids = suspects.filter((s) => yearLookups[s.id]?.state !== 'done').map((s) => s.id);
@@ -220,6 +282,10 @@ export default function App() {
   }
 
   function handleImported(result: ImportResult, target: ImportTarget) {
+    // New songs get their year checked straight away, and so do checked songs that now have an ISRC. Older
+    // unchecked songs wait for the "Check years" button, so updating a big playlist doesn't start a long run.
+    const known = libRef.current?.songs ?? {};
+    setToCheck(result.songIds.filter((id) => !known[id] || known[id].yearCheck));
     update((l) => {
       let next = upsertSongs(l, result.fetched);
       next = applyYearHints(next, result.yearHints);
@@ -533,7 +599,56 @@ export default function App() {
                       {t.useFoundYears(foundYears.length)}
                     </button>
                   )}
+                  {yearCheck.running ? (
+                    <span className="inline">
+                      <span className="muted">{t.checkingYears(yearCheck.done, yearCheck.total)}</span>
+                      <button className="ghost small" onClick={stopYearCheck}>
+                        {t.stopCheck}
+                      </button>
+                    </span>
+                  ) : (
+                    uncheckedInView.length > 0 && (
+                      <button className="ghost small" title={t.checkYearsTitle} onClick={checkViewYears}>
+                        {t.checkYears(uncheckedInView.length)}
+                      </button>
+                    )
+                  )}
+                  {checkError && <span className="muted">{t.checkYearsFailed(checkError)}</span>}
                 </div>
+
+                {!yearCheck.running &&
+                  yearCheck.outcomes &&
+                  Object.values(yearCheck.outcomes).some((ids) => ids.length) && (
+                    <div className="year-summary" role="status">
+                      <span>{t.yearLookupDone(Object.values(yearCheck.outcomes).flat().length)}</span>
+                      {YEAR_OUTCOMES.filter((k) => yearCheck.outcomes![k].length > 0).map((k) => {
+                        const n = k === 'review' ? pendingReview.length : yearCheck.outcomes![k].length;
+                        return (
+                          <button
+                            key={k}
+                            className={`outcome ${k}`}
+                            aria-pressed={outcomeFilter === k}
+                            disabled={n === 0}
+                            title={`${t.yearOutcomeTitles[k]}. ${t.yearOutcomeTitle}`}
+                            onClick={() => setOutcomeFilter(outcomeFilter === k ? null : k)}
+                          >
+                            {k === 'review' && n === 0 ? t.allReviewed : t.yearOutcome[k](n)}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className="mini"
+                        title={t.dismissSummary}
+                        aria-label={t.dismissSummary}
+                        onClick={() => {
+                          dismissYearCheck();
+                          setOutcomeFilter(null);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
 
                 {decadeCounts.length > 0 && (
                   <div className="decades" title={t.decadesTitle}>
@@ -600,7 +715,7 @@ export default function App() {
                   songs={shown}
                   collections={lib.collections}
                   selected={selected}
-                  resetKey={`${view}|${query}|${decade}|${suspectOnly}|${sort.key}|${sort.dir}`}
+                  resetKey={`${view}|${query}|${decade}|${suspectOnly}|${outcomeFilter}|${sort.key}|${sort.dir}`}
                   sort={sort}
                   onSort={setSort}
                   yearLookups={yearLookups}

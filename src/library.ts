@@ -1,5 +1,5 @@
 import { t } from './i18n';
-import type { Collection, CollectionSource, Library, Song, SongData } from './types';
+import type { Collection, CollectionSource, Library, Song, SongData, YearCheck } from './types';
 
 export const emptyLibrary = (): Library => ({
   version: 1,
@@ -31,18 +31,62 @@ export async function saveLibrary(lib: Library): Promise<void> {
   if (!res.ok) throw new Error(t().couldNotSaveLibrary(res.status));
 }
 
+/** Has the dev server copy data/library.json to a dated backup next to it. */
+export async function backupLibrary(): Promise<void> {
+  const res = await fetch('/api/library/backup', { method: 'POST' });
+  if (!res.ok) throw new Error(t().couldNotBackUpLibrary(res.status));
+}
+
 // --- Derived values ---
 
-export const songYear = (s: Song) => s.yearOverride ?? s.spotifyYear;
+/** The MusicBrainz year when it is earlier than Spotify's: the only direction a check may move a year. */
+function earlierCheckedYear(s: Song) {
+  const year = s.yearCheck?.year;
+  return year != null && (s.spotifyYear == null || year < s.spotifyYear) ? year : null;
+}
+
+/** A year found by ISRC (the exact recording) is used without asking, unless the user decided the year. */
+export const autoYear = (s: Song) =>
+  s.yearCheck?.via === 'isrc' && s.yearOverride == null && !s.yearConfirmed ? earlierCheckedYear(s) : null;
+
+export const songYear = (s: Song) => s.yearOverride ?? autoYear(s) ?? s.spotifyYear;
+
+/**
+ * An earlier year from MusicBrainz waiting for a click: a title + artist search result, or an ISRC result that
+ * disagrees with a year the user set or confirmed. Gone once the user decides (see YearCheck.settled).
+ */
+export function yearSuggestion(s: Song): number | null {
+  const found = s.yearCheck?.year;
+  if (found == null || s.yearCheck!.settled || autoYear(s) != null) return null;
+  const current = songYear(s);
+  return current == null || found < current ? found : null;
+}
 
 const SUSPECT_ALBUM_RE =
   /remaster|greatest|best of|hits|collection|anniversary|deluxe|edition|live|anthology|essential/i;
 
 /** Spotify's year is the album's release year, which is often a later remaster or compilation. */
 export function isYearSuspect(s: Song) {
+  if (yearSuggestion(s) != null) return true;
   if (s.yearOverride != null || s.yearConfirmed) return false;
+  // MusicBrainz backs the year: an ISRC match (corrected, or Spotify's year is the recording's own), or a search
+  // that found Spotify's year. A later search year proves nothing (it missed the original), so keywords decide.
+  const check = s.yearCheck;
+  if (check?.year != null && (check.via === 'isrc' || check.year === s.spotifyYear)) return false;
   return s.albumType === 'compilation' || SUSPECT_ALBUM_RE.test(s.album) || /remaster/i.test(s.title);
 }
+
+export type YearCheckOutcome = 'corrected' | 'review' | 'unchanged' | 'notFound';
+
+/** What a MusicBrainz check did to a song, for the summary after a run. */
+export function yearCheckOutcome(s: Song): YearCheckOutcome {
+  if (autoYear(s) != null) return 'corrected';
+  if (yearSuggestion(s) != null) return 'review';
+  return s.yearCheck?.year == null ? 'notFound' : 'unchanged';
+}
+
+/** Songs the MusicBrainz check hasn't seen yet, or only by search while they now have an ISRC. */
+export const needsYearCheck = (s: Song) => !s.yearCheck || (!!s.isrc && s.yearCheck.isrc !== s.isrc);
 
 export const decadeOf = (year: number | null | undefined) => (year == null ? null : Math.floor(year / 10) * 10);
 
@@ -133,14 +177,25 @@ export function applyYearHints(lib: Library, hints: Record<string, number>): Lib
 export function setYear(lib: Library, id: string, year: number | null): Library {
   const s = lib.songs[id];
   if (!s) return lib;
-  const yearOverride = year == null || year === s.spotifyYear ? null : year;
-  // Clearing the year resets the song to Spotify's year, flag included.
+  // Clearing the year resets the song to Spotify's (or the ISRC-checked) year, flag and suggestion included.
   const yearConfirmed = year == null ? false : s.yearConfirmed;
-  return { ...lib, songs: { ...lib.songs, [id]: { ...s, yearOverride, yearConfirmed } } };
+  const reset: Song = { ...s, yearOverride: null, yearConfirmed };
+  const yearOverride = year == null || year === songYear(reset) ? null : year;
+  const yearCheck = s.yearCheck && { ...s.yearCheck, settled: year != null };
+  return { ...lib, songs: { ...lib.songs, [id]: { ...reset, yearOverride, yearCheck } } };
 }
 
-/** Marks Spotify's year as right, so the song is no longer flagged ⚠. */
-export const confirmYear = (lib: Library, id: string) => mapSongs(lib, [id], (s) => ({ ...s, yearConfirmed: true }));
+/** Marks Spotify's year as right, so the song is no longer flagged ⚠ and MusicBrainz suggests nothing more. */
+export const confirmYear = (lib: Library, id: string) =>
+  mapSongs(lib, [id], (s) => ({
+    ...s,
+    yearConfirmed: true,
+    yearCheck: s.yearCheck && { ...s.yearCheck, settled: true },
+  }));
+
+/** Stores a MusicBrainz check result on the song. */
+export const setYearCheck = (lib: Library, id: string, check: YearCheck) =>
+  mapSongs(lib, [id], (s) => ({ ...s, yearCheck: check }));
 
 /** A year the host checked during a game: stored on the song, which is then no longer flagged ⚠. */
 export const setCheckedYear = (lib: Library, id: string, year: number) => confirmYear(setYear(lib, id, year), id);

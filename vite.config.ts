@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
+import { musicBrainzApi } from './server/musicbrainz';
 
 // SONG_GUESSR_DATA_DIR lets the end-to-end tests use their own library instead of the real one.
 const LIBRARY_FILE = path.resolve(__dirname, process.env.SONG_GUESSR_DATA_DIR ?? 'data', 'library.json');
@@ -10,6 +11,23 @@ const LIBRARY_FILE = path.resolve(__dirname, process.env.SONG_GUESSR_DATA_DIR ??
 // resets and can be backed up or shared. Only available while running via Vite.
 function libraryFileApi(): Plugin {
   const handler = (req: any, res: any, next: () => void) => {
+    // A dated copy next to the library, made before bulk changes (e.g. the MusicBrainz year check).
+    if (req.url === '/api/library/backup' && req.method === 'POST') {
+      try {
+        const stamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const file = path.join(path.dirname(LIBRARY_FILE), `library.backup-${stamp}.json`);
+        // A backup from this same second is already there; never overwrite a backup.
+        if (fs.existsSync(LIBRARY_FILE) && !fs.existsSync(file)) {
+          fs.copyFileSync(LIBRARY_FILE, file, fs.constants.COPYFILE_EXCL);
+        }
+        res.statusCode = 204;
+        res.end();
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(String(e));
+      }
+      return;
+    }
     if (req.url !== '/api/library') return next();
     if (req.method === 'GET') {
       res.setHeader('Content-Type', 'application/json');
@@ -47,7 +65,7 @@ function libraryFileApi(): Plugin {
 
 // Spotify no longer accepts "localhost" redirect URIs, so serve on the loopback IP.
 export default defineConfig({
-  plugins: [react(), libraryFileApi()],
+  plugins: [react(), libraryFileApi(), musicBrainzApi()],
   server: { host: '127.0.0.1', port: 5173, strictPort: true, watch: { ignored: ['**/data/**', '**/e2e/**'] } },
   preview: { host: '127.0.0.1', port: 5173, strictPort: true },
 });

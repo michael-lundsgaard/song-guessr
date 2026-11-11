@@ -54,6 +54,12 @@ If the app shows **Reconnect Spotify**, click it once: playback needs two extra 
 
 Spotify reports the album's release year, which for remasters and compilations is often wrong for a timeline game. Songs where this looks likely are flagged ⚠. Click a year to correct it (✎ marks corrected years; clear the field to reset).
 
+**Look up years on MusicBrainz** checks the original release year of every song in the view that hasn't been checked yet. Songs from a new import are checked automatically. The dev server makes a dated backup of the library first (`data/library.backup-….json`) and spaces the requests out, so it runs in the background at about one song a second, and faster for songs with an ISRC: 130 songs took under a minute. **Stop** pauses it; the next run picks up where it stopped. When it's done, a line says what happened (e.g. "Looked up 130 songs: 14 corrected · 116 unchanged"); click a count to show only those songs. "To review" counts down as you handle the suggestions (the songs leave that list), and the line goes away when you open another collection or click ×. A year only ever moves earlier:
+
+- Found by ISRC (the exact recording; Spotify includes it for single tracks, playlists and Liked Songs, but not album pages): the year is used straight away and marked **MB**. Spotify's year is kept, so typing a year or clearing the field still works as before.
+- Found by title and artist with Spotify's own year: the year is confirmed, and a ⚠ from the album or title name goes away.
+- Found by title and artist with an earlier year, or an earlier year than one you set or ✓'d yourself: a one-click suggestion (→ 1975), and the song is flagged ⚠ until you click it, type a year or click ✓.
+
 Next to a ⚠ year, 🔍 searches Spotify for the earliest non-compilation, non-live release of the same song and offers its year (→ 1975, click to use). **Find original years** does this for every ⚠ song in the view, and **Use found years** accepts all the results. If Spotify's year is right, click ✓ to stop flagging it.
 
 ## Duplicates and readiness

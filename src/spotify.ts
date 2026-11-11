@@ -274,6 +274,8 @@ interface SpTrack {
   duration_ms: number;
   artists: { name: string }[];
   album?: SpAlbum;
+  /** Only on full track objects (single track, playlist, Liked Songs, search), not on an album's track list. */
+  external_ids?: { isrc?: string };
 }
 
 interface Paging<T> {
@@ -287,7 +289,10 @@ function toSongData(t: SpTrack | null | undefined, album?: SpAlbum): SongData | 
   const year = parseInt(al.release_date?.slice(0, 4) ?? '', 10);
   // Images are sorted largest first; the ~300px one is plenty for the library and game cards.
   const image = al.images[1] ?? al.images[0];
+  const isrc = t.external_ids?.isrc?.trim().toUpperCase();
   return {
+    // Left out when missing, so an album import doesn't wipe an ISRC the song already has.
+    ...(isrc ? { isrc } : {}),
     id: t.id,
     uri: t.uri,
     title: t.name,

@@ -354,6 +354,57 @@ code {
   color: var(--accent-ink);
 }
 
+/* After a MusicBrainz year lookup: what it did, each count a filter. */
+.year-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--info);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.year-summary .outcome {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.year-summary .outcome:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.year-summary .outcome:disabled {
+  background: transparent;
+  color: var(--muted);
+}
+
+.year-summary .mini {
+  margin-left: auto;
+}
+
+.year-summary .outcome.corrected {
+  color: var(--info);
+}
+
+.year-summary .outcome.review {
+  color: var(--warn);
+}
+
+.year-summary .outcome[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
 .selection-bar {
   position: sticky;
   top: -16px;
@@ -456,6 +507,19 @@ code {
 
 .songs .year-cell {
   white-space: nowrap;
+}
+
+/* A year taken from MusicBrainz (by ISRC): small and quiet, it needs no attention. */
+/* "Keep this year" next to a suggestion: a little apart, so it isn't hit instead of →. */
+.year-cell .mini.keep {
+  margin-left: 6px;
+}
+
+.year-cell .flag.mb {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 button.mini {

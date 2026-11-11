@@ -14,7 +14,8 @@ export default defineConfig({
   webServer: {
     command: 'npx vite --port 5174',
     url: 'http://127.0.0.1:5174',
-    env: { SONG_GUESSR_DATA_DIR: 'e2e/.data' },
+    // MusicBrainz goes to a closed port, so no test ever reaches the real service; tests fake it with page.route.
+    env: { SONG_GUESSR_DATA_DIR: 'e2e/.data', SONG_GUESSR_MUSICBRAINZ_URL: 'http://127.0.0.1:9/ws/2' },
     reuseExistingServer: false,
   },
 });

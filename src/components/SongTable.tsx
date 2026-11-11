@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { isYearSuspect, songYear } from '../library';
+import { autoYear, isYearSuspect, songYear, yearSuggestion } from '../library';
 import type { Collection, Song } from '../types';
 import { locale, useT } from '../i18n';
 import { earlierRelease, type YearLookup } from '../versions';
@@ -224,6 +224,8 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
 
   const commit = () => {
     const parsed = parseInt(draft, 10);
+    // Leaving the field unchanged decides nothing (it would settle a pending suggestion).
+    if (draft.trim() === (year?.toString() ?? '')) return;
     if (draft.trim() === '') actions.set(song.id, null);
     else if (parsed >= 1900 && parsed <= 2100) actions.set(song.id, parsed);
     else setDraft(year?.toString() ?? '');
@@ -231,14 +233,17 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
 
   const suspect = isYearSuspect(song);
   const overridden = song.yearOverride != null;
+  const fromMusicBrainz = autoYear(song) != null;
   const title = overridden
     ? t.yearCorrectedTitle(String(song.spotifyYear ?? '?'))
-    : suspect
-      ? t.yearSuspectTitle(song.album)
-      : t.yearReleaseTitle(song.releaseDate);
+    : fromMusicBrainz
+      ? t.mbYearTitle(String(song.spotifyYear ?? '?'))
+      : suspect
+        ? t.yearSuspectTitle(song.album)
+        : t.yearReleaseTitle(song.releaseDate);
 
   return (
-    <span className={`year-cell${suspect ? ' suspect' : ''}${overridden ? ' overridden' : ''}`} title={title}>
+    <span className={`year-cell${suspect ? ' suspect' : overridden ? ' overridden' : ''}`} title={title}>
       <input
         value={draft}
         inputMode="numeric"
@@ -248,6 +253,7 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
       />
       {suspect && <span className="flag">⚠</span>}
       {overridden && <span className="flag">✎</span>}
+      {fromMusicBrainz && <span className="flag mb">MB</span>}
       {suspect && <YearSuggestion song={song} lookup={lookup} actions={actions} />}
     </span>
   );
@@ -256,9 +262,19 @@ function YearCell({ song, lookup, actions }: { song: Song; lookup?: YearLookup; 
 function YearSuggestion({ song, lookup, actions }: { song: Song; lookup?: YearLookup; actions: YearActions }) {
   const t = useT();
   const earlier = earlierRelease(song, lookup);
+  const suggested = yearSuggestion(song);
   return (
     <>
-      {!lookup && (
+      {suggested != null && (
+        <button
+          className="mini suggestion"
+          title={t.mbSuggestionTitle(suggested)}
+          onClick={() => actions.set(song.id, suggested)}
+        >
+          → {suggested}
+        </button>
+      )}
+      {!lookup && suggested == null && (
         <button className="mini" title={t.findYearTitle} onClick={() => actions.find(song.id)}>
           🔍
         </button>
@@ -283,7 +299,11 @@ function YearSuggestion({ song, lookup, actions }: { song: Song; lookup?: YearLo
           {t.noEarlier}
         </span>
       )}
-      <button className="mini" title={t.confirmYearTitle} onClick={() => actions.confirm(song.id)}>
+      <button
+        className={`mini${suggested != null ? ' keep' : ''}`}
+        title={suggested != null ? t.keepYearTitle : t.confirmYearTitle}
+        onClick={() => actions.confirm(song.id)}
+      >
         ✓
       </button>
     </>

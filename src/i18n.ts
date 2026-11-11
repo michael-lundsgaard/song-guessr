@@ -111,6 +111,33 @@ const en = {
   noEarlier: 'none',
   noEarlierTitle: 'Spotify has no earlier release of this song',
   confirmYearTitle: "Spotify's year is right: stop flagging it",
+  checkYears: (n: number) => `Look up years on MusicBrainz (${n})`,
+  checkYearsTitle:
+    'Look up the original release year of every song in this view that is not checked yet. Runs in the background (about one song a second, faster with an ISRC) and only ever moves a year earlier. Backs up the library first.',
+  checkingYears: (done: number, total: number) => `Looking up years… ${done}/${total}`,
+  stopCheck: 'Stop',
+  checkYearsFailed: (message: string) => `Year lookup stopped: ${message}`,
+  musicBrainzFailed: (status: number) => `MusicBrainz answered ${status}`,
+  yearLookupDone: (n: number) => `Looked up ${n} ${n === 1 ? 'song' : 'songs'}:`,
+  yearOutcome: {
+    corrected: (n: number) => `${n} corrected`,
+    review: (n: number) => `${n} to review`,
+    unchanged: (n: number) => `${n} unchanged`,
+    notFound: (n: number) => `${n} not found`,
+  },
+  yearOutcomeTitle: 'Show only these songs (click again to show all)',
+  yearOutcomeTitles: {
+    corrected: 'Year taken from MusicBrainz by ISRC, marked MB',
+    review: 'MusicBrainz suggests an earlier year: click → to use it, or ✓ to keep the year',
+    unchanged: 'MusicBrainz agrees, or found no earlier year',
+    notFound: 'MusicBrainz has no match: the year is unchecked',
+  },
+  dismissSummary: 'Hide this summary',
+  allReviewed: 'all reviewed ✓',
+  keepYearTitle: 'The year shown is right: ignore the MusicBrainz suggestion',
+  mbSuggestionTitle: (year: number) => `MusicBrainz: first released in ${year}. Click to use this year.`,
+  mbYearTitle: (spotifyYear: string) =>
+    `Original year from MusicBrainz (Spotify says ${spotifyYear}). Type a year to change it.`,
 
   // Player
   play: 'Play',
@@ -143,6 +170,7 @@ const en = {
   sessionExpired: 'Spotify session expired. Please connect again.',
   couldNotLoadLibrary: (status: number) => `Could not load library (${status})`,
   couldNotSaveLibrary: (status: number) => `Could not save library (${status})`,
+  couldNotBackUpLibrary: (status: number) => `Could not back up the library (${status})`,
 
   // Import panel
   tabPaste: 'Paste links',
@@ -478,6 +506,33 @@ const da: Messages = {
   noEarlier: 'ingen',
   noEarlierTitle: 'Spotify har ingen tidligere udgivelse af sangen',
   confirmYearTitle: 'Spotifys år er rigtigt: stop med at markere det',
+  checkYears: (n) => `Slå år op på MusicBrainz (${n})`,
+  checkYearsTitle:
+    'Slår det oprindelige udgivelsesår op for alle sange i visningen, der ikke er tjekket endnu. Kører i baggrunden (cirka én sang i sekundet, hurtigere med ISRC) og rykker kun et år tidligere. Tager først en sikkerhedskopi af biblioteket.',
+  checkingYears: (done, total) => `Slår år op… ${done}/${total}`,
+  stopCheck: 'Stop',
+  checkYearsFailed: (message) => `Opslaget af år stoppede: ${message}`,
+  musicBrainzFailed: (status) => `MusicBrainz svarede ${status}`,
+  yearLookupDone: (n) => `Slog ${n} ${n === 1 ? 'sang' : 'sange'} op:`,
+  yearOutcome: {
+    corrected: (n) => `${n} rettet`,
+    review: (n) => `${n} skal tjekkes`,
+    unchanged: (n) => `${n} uændret`,
+    notFound: (n) => `${n} ikke fundet`,
+  },
+  yearOutcomeTitle: 'Vis kun disse sange (klik igen for at vise alle)',
+  yearOutcomeTitles: {
+    corrected: 'Året er hentet fra MusicBrainz via ISRC og markeret MB',
+    review: 'MusicBrainz foreslår et tidligere år: klik på → for at bruge det, eller ✓ for at beholde året',
+    unchanged: 'MusicBrainz er enig eller fandt ikke et tidligere år',
+    notFound: 'MusicBrainz har ikke sangen: året er ikke tjekket',
+  },
+  dismissSummary: 'Skjul oversigten',
+  allReviewed: 'alle tjekket ✓',
+  keepYearTitle: 'Det viste år er rigtigt: se bort fra forslaget fra MusicBrainz',
+  mbSuggestionTitle: (year) => `MusicBrainz: udkom første gang i ${year}. Klik for at bruge året.`,
+  mbYearTitle: (spotifyYear) =>
+    `Oprindeligt år fra MusicBrainz (Spotify siger ${spotifyYear}). Skriv et år for at ændre det.`,
 
   play: 'Afspil',
   pause: 'Pause',
@@ -509,6 +564,7 @@ const da: Messages = {
   sessionExpired: 'Spotify-sessionen er udløbet. Forbind igen.',
   couldNotLoadLibrary: (status) => `Kunne ikke indlæse biblioteket (${status})`,
   couldNotSaveLibrary: (status) => `Kunne ikke gemme biblioteket (${status})`,
+  couldNotBackUpLibrary: (status) => `Kunne ikke tage en sikkerhedskopi af biblioteket (${status})`,
 
   tabPaste: 'Indsæt links',
   tabSearch: 'Søg',
