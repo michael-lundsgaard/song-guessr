@@ -34,14 +34,29 @@ interface MbReleaseGroup {
   'artist-credit'?: MbCredit[];
 }
 
+// When MusicBrainz is overloaded, the dev server retries for about 30 s and then answers 503. Wait and ask again a
+// few more times (about 2 minutes in all) before giving up, so a busy spell doesn't stop a long run.
+const BUSY_WAITS_MS = [20_000, 40_000, 60_000];
+
 async function mbGet<T>(resource: 'recording' | 'release-group', params: Record<string, string>, signal?: AbortSignal) {
-  const res = await fetch(`/api/musicbrainz/${resource}?${new URLSearchParams(params)}`, { signal });
-  if (!res.ok) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`/api/musicbrainz/${resource}?${new URLSearchParams(params)}`, { signal });
+    if (res.ok) return (await res.json()) as T;
     const body = await res.json().catch(() => null);
-    throw new MusicBrainzError(res.status, body?.error ?? t().musicBrainzFailed(res.status));
+    const busy = res.status === 503 || res.status === 429;
+    if (!busy || attempt >= BUSY_WAITS_MS.length) {
+      throw new MusicBrainzError(res.status, body?.error ?? t().musicBrainzFailed(res.status));
+    }
+    await waitFor(BUSY_WAITS_MS[attempt], signal);
   }
-  return (await res.json()) as T;
 }
+
+/** Resolves after `ms`, or rejects at once when the lookup is stopped. */
+const waitFor = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => (clearTimeout(timer), reject(signal.reason)), { once: true });
+  });
 
 const yearOf = (date: string | undefined) => {
   const year = parseInt(date?.slice(0, 4) ?? '', 10);
@@ -112,12 +127,30 @@ const ALTERNATE_RE =
 
 const sameTitle = (a: string, b: string) => normalizeName(stripVersion(a)) === normalizeName(b);
 
+// The song itself is another version (remix, live, acoustic…): a search by its name finds the original song, whose
+// year isn't this version's (HVME's 2021 "Goosebumps - Remix" isn't Travis Scott's 2016 song).
+const OWN_VERSION_RE = /\b(remix|live|acoustic|unplugged|re-?recorded)\b/i;
+const isOtherVersion = (song: Song) => OWN_VERSION_RE.test(song.title.replace(stripVersion(song.title), ''));
+
+/**
+ * When some matches credit every artist of the song, only those: Lost Frequencies & Calum Scott's 2021 "Where Are You
+ * Now" isn't Lost Frequencies feat. Chesqua's 2015 song of the same name.
+ */
+function preferAllArtists<T extends { 'artist-credit'?: MbCredit[] }>(song: Song, matches: T[]): T[] {
+  if (song.artists.length < 2) return matches;
+  const credits = (m: T) =>
+    ` ${normalizeName((m['artist-credit'] ?? []).map((c) => (c.name ?? c.artist?.name ?? '') + (c.joinphrase ?? '')).join(''))} `;
+  const all = matches.filter((m) => song.artists.every((a) => credits(m).includes(` ${normalizeName(a)} `)));
+  return all.length ? all : matches;
+}
+
 /**
  * Searches recordings by title and first artist and takes the earliest first-release year of the exact matches.
  * Big classics have hundreds of recordings and the search's top results can miss the original, so when that finds
  * nothing earlier than Spotify, the singles and albums of that name are searched too.
  */
 export async function yearBySearch(song: Song, signal?: AbortSignal): Promise<number | null> {
+  if (isOtherVersion(song)) return null;
   const title = stripVersion(song.title);
   const artist = song.artists[0] ?? '';
   const recordings = await mbGet<{ recordings?: MbRecording[] }>(
@@ -126,10 +159,12 @@ export async function yearBySearch(song: Song, signal?: AbortSignal): Promise<nu
     signal,
   );
   const fromRecordings = earliest(
-    (recordings.recordings ?? [])
-      .filter((r) => !r.video && sameTitle(r.title, title) && credited(song, r['artist-credit']))
-      .filter((r) => !ALTERNATE_RE.test(r.disambiguation ?? '') && !ALTERNATE_RE.test(r.title.slice(title.length)))
-      .map((r) => yearOf(r['first-release-date'])),
+    preferAllArtists(
+      song,
+      (recordings.recordings ?? [])
+        .filter((r) => !r.video && sameTitle(r.title, title) && credited(song, r['artist-credit']))
+        .filter((r) => !ALTERNATE_RE.test(r.disambiguation ?? '') && !ALTERNATE_RE.test(r.title.slice(title.length))),
+    ).map((r) => yearOf(r['first-release-date'])),
   );
   if (fromRecordings != null && song.spotifyYear != null && fromRecordings < song.spotifyYear) return fromRecordings;
 
@@ -142,9 +177,10 @@ export async function yearBySearch(song: Song, signal?: AbortSignal): Promise<nu
     signal,
   );
   const fromGroups = earliest(
-    (groups['release-groups'] ?? [])
-      .filter((g) => sameTitle(g.title, title) && credited(song, g['artist-credit']))
-      .map((g) => yearOf(g['first-release-date'])),
+    preferAllArtists(
+      song,
+      (groups['release-groups'] ?? []).filter((g) => sameTitle(g.title, title) && credited(song, g['artist-credit'])),
+    ).map((g) => yearOf(g['first-release-date'])),
   );
   return earliest([fromRecordings, fromGroups]);
 }

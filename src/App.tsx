@@ -537,7 +537,8 @@ export default function App() {
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={t.searchLibrary}
                   />
-                  {suspectCount > 0 && (
+                  {/* Kept while ticked, so a view without ⚠ songs can still untick it. */}
+                  {(suspectCount > 0 || suspectOnly) && (
                     <label className="inline" title={t.checkYearTitle}>
                       <input type="checkbox" checked={suspectOnly} onChange={(e) => setSuspectOnly(e.target.checked)} />
                       {t.checkYear(suspectCount)}

@@ -6,8 +6,8 @@ import type { Plugin } from 'vite';
 
 // SONG_GUESSR_MUSICBRAINZ_URL lets the end-to-end tests point this somewhere harmless.
 const BASE_URL = process.env.SONG_GUESSR_MUSICBRAINZ_URL ?? 'https://musicbrainz.org/ws/2';
-// MusicBrainz asks for an app name, version and contact; add a contact if it ever starts refusing requests.
-const USER_AGENT = 'SongGuessr/0.1 ( private, localhost only )';
+// MusicBrainz asks for an app name, version and contact.
+const USER_AGENT = 'SongGuessr/0.1 ( https://github.com/michael-lundsgaard/song-guessr )';
 const GAP_MS = 1100;
 const RETRIES = 4;
 const TIMEOUT_MS = 20_000;

@@ -162,3 +162,23 @@ test('year check: Stop leaves the rest unchecked, and an error is shown', async 
   await expect(page.getByRole('button', { name: /Look up years on MusicBrainz/ })).toHaveText(before!);
   for (const f of backups()) fs.unlinkSync(path.join(DATA_DIR, f));
 });
+
+test('year check: a busy MusicBrainz is waited out instead of stopping the run', async ({ page }) => {
+  const lib = makeLibrary(2);
+  await seed(page, lib);
+  await page.clock.install();
+  let busy = 2; // the first two answers are "busy", as when MusicBrainz is overloaded
+  await page.route('**/api/musicbrainz/**', (route) =>
+    busy-- > 0
+      ? route.fulfill({ status: 503, json: { error: 'The MusicBrainz web server is currently busy.' } })
+      : route.fulfill({ json: { count: 0, recordings: [], 'release-groups': [] } }),
+  );
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Look up years on MusicBrainz (2)' }).click();
+  await expect(page.getByText(/Looking up years… 0\/2/)).toBeVisible();
+  await page.clock.fastForward(20_000);
+  await page.clock.fastForward(40_000);
+  await expect(page.locator('.year-summary')).toContainText('Looked up 2 songs:');
+  await expect(page.getByText(/Year lookup stopped/)).toHaveCount(0);
+  for (const f of backups()) fs.unlinkSync(path.join(DATA_DIR, f));
+});
