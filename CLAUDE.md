@@ -1,6 +1,6 @@
 # Song Guessr
 
-A home-made Hitster: a Spotify-backed song library (React + Vite, TypeScript) with game modes to come. [README.md](README.md) is the user guide; [ROADMAP.md](ROADMAP.md) is the plan, so tick items off and add notes there as work lands.
+A home-made Hitster: a Spotify-backed song library (React + Vite, TypeScript) with game modes to come. [README.md](README.md) is the user guide; [ROADMAP.md](ROADMAP.md) is the plan, so tick items off and add notes there as work lands. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the app works for someone new to the code; update it when a flow, a storage place or the file layout changes.
 
 ## Commands
 

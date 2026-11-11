@@ -104,3 +104,17 @@ In priority order.
     - All Out lists looked up (2026-11-11, 867 songs, ~36 min, all by search): 187 suggestions in the library (108 of them 1 year: single before album; 41 of 10+ years). Review found two search mistakes, now fixed: remixes, live and acoustic versions are no longer searched by the original's name (HVME's 2021 _Goosebumps - Remix_ got Travis Scott's 2016), and a match crediting all the song's artists wins (Lost Frequencies & Calum Scott's 2021 _Where Are You Now_ got a 2015 song of the same name with another singer).
 - [ ] **Sound when the board is on the TV.** Casting the Chrome tab to a Chromecast also sends its audio, and the re-encoding makes it sound poor through the soundbar. To test first: cast the whole screen instead, with the PC's sound on Bluetooth. Option to discuss later: a separate "TV view" window (board only, no controls, no audio) to cast, while the main tab plays to the speaker. Spotify Connect straight to a TV Chromecast would show the title on screen, and a phone scanning a song QR would show it in the Spotify app.
 - [ ] _Staged:_ phones as controllers (join by QR, send answers). It needs the dev server reachable on the home network, which goes beyond localhost-only; decide before building.
+
+## 8. Code health
+
+From a review of the whole code (2026-11-11); the explainer it produced is [ARCHITECTURE.md](ARCHITECTURE.md). Nothing here before the game nights (Fri 13 / Sat 14 Nov).
+
+- [x] Vite 5.4.11 → 5.4.21 (dev-server security fixes; typecheck, build and all e2e tests pass). `npm audit` still lists esbuild's own web server, which Vite doesn't use.
+- [ ] **Unit tests** (Vitest) for the pure rules in `game.ts` and `library.ts` (years, ⚠, end of game, sudden death), on a feature branch. Same branch: Playwright ≥ 1.55.1 (audit: browser download without certificate check).
+- [ ] **Oxlint**, set up like the curator app (`apps/app/.oxlintrc.json`: plugins react, typescript, oxc; `react/rules-of-hooks` as an error; `npm run lint`; the `oxc.oxc-vscode` extension), plus `react/exhaustive-deps` as a warning. The project has never had a linter. Same branch; expect a first round of warnings to sort.
+- [ ] **Syncing Liked Songs brings merged duplicates back.** Merging deletes the other versions, but they are still liked on Spotify, so **↻ Update from Spotify** adds them again as new songs. Fix: remember merged-away ids (`old id → kept id`) and put the kept song in the collection instead. Decide whether songs deleted by hand should stay out too.
+- [ ] **Backups that don't pile up.** Keep only the last few MusicBrainz backups (prune older ones), and ask before **Merge all** on the Duplicates page (one click, no undo today).
+- [ ] _Later, if a second tab or a TV view comes:_ two tabs each save their own copy of the whole library, so the last save wins. Fix: the server rejects a save based on an older version.
+- [ ] _Later:_ split `App.tsx` (785 lines: sidebar, toolbar, year summary, filters) next time the library page changes.
+- [ ] _Later:_ cap how long a Spotify "retry after" can make the app wait, and say it's waiting. Today a long wait looks like an import that hangs.
+- [ ] _When Connect playback is un-parked:_ the 3-second state poll of another Spotify device uses quota while a song plays there.
